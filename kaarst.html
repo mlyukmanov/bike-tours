@@ -108,7 +108,7 @@
 
 <div class="overlay" id="listOv">
   <div class="ovhead"><h2>All Stops</h2><button class="x" data-close="listOv">×</button></div>
-  <div class="ovmeta">~15 km loop · flat · 1.5–3 hrs with stops · start & finish at the Rathaus</div>
+  <div class="ovmeta">Flat loop · start & finish at the Rathaus<br><span id="routeMeta" style="color:var(--moss-dk);font-weight:600;">Calculating route distance…</span></div>
   <div class="ovlist" id="ovList"></div>
 </div>
 
@@ -143,33 +143,45 @@ function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');cle
 /* ================= TOUR DATA ================= */
 const STOPS = [
   { n:"Rathaus & Neumarkt", de:"Town Hall & New Market", cat:"Town Centre", lat:51.226322, lng:6.619950,
-    text:`Welcome to Kaarst, and welcome to what your legs have foolishly agreed to. You're standing at the Neumarkt, the beating heart of this little Rhineland town — and yes, that bold thing in concrete, steel and glass is the town hall. Someone in 1975 clearly had opinions, and honestly, good for them.
+    text:`Welcome to Kaarst, and welcome to what your legs have foolishly agreed to. You're standing at the Neumarkt, the heart of this Rhineland town in the Rhein-Kreis Neuss, just west of Düsseldorf. That bold thing in concrete, steel and glass is the town hall.
 
-That's the year Kaarst became a proper city, stitched together from a handful of old farming villages that presumably drew straws. The upshot is a town with no airs: no cathedral queue, no selfie sticks, just real life. Check your brakes — this is the one moment on the tour where stopping is entirely your choice — and when you're ready, roll north toward the old church.` },
+Kaarst as a single city is genuinely young: it was formed in 1975 by merging five old villages — Kaarst, Büttgen, Holzbüttgen, Driesch and Vorst — which is why the tour hops between distinct old church-villages rather than one historic core. The town grew fast in the late 20th century as a commuter base for Düsseldorf, so you get medieval bones wrapped in modern suburb.
+
+Check your brakes — this is the one moment on the tour where stopping is entirely your choice — and when you're ready, roll north toward the churches.` },
   { n:"St. Martinus Church", de:"Kirche St. Martinus", cat:"Faith & History", lat:51.230425, lng:6.617533,
-    text:`Ahead rises St. Martinus, the tall parish church you can spot from most of Kaarst, which is convenient, because it means you can never truly get lost. Locals are quietly proud of it — surprisingly lofty for a town church, peaceful inside, and usually open, so feel free to lean the bike and step in. Nobody will judge the helmet hair. Probably.
+    text:`Ahead rises St. Martinus, Kaarst's main Catholic parish church. A quick word on "parish": in the Catholic and Anglican worlds it's the basic local unit of church life — a defined neighbourhood with its own church, its own priest, and its own community, the ecclesiastical equivalent of your home district. This one belongs to the Archdiocese of Cologne.
 
-Its namesake, Saint Martin, famously cut his cloak in half to share with a beggar — the patron saint of not being stingy. Every November the local children parade past here with paper lanterns singing in his honour, which is exactly as adorable as it sounds. If you're here around Martinstag, you're in for a glow-up. Literally.` },
-  { n:"Alt-St. Martin", de:"Old St. Martin, Alt-Kaarst", cat:"The Old Village", lat:51.234213, lng:6.616723,
-    text:`Now you've reached Alt-Kaarst — "old Kaarst," for those keeping score — and its little jewel, the chapel of Alt-St. Martin. This is the historic seed the whole town grew from, and to this day it's the number-one address in Kaarst for weddings. So if you hear bells and see confetti, ride slowly and try to look photogenic in the background.
+The building is younger than it looks: the Neusser architect Wilhelm Gilges designed it, and it went up between 1955 and 1957 as a modern hall church — one wide, column-free nave — because the old medieval church across town had simply run out of room as Kaarst boomed in Düsseldorf's commuter belt. On Palm Sunday 1957 the whole congregation walked here in procession from the old church to consecrate this one.
 
-Come the first Sunday of Advent, these lanes fill with a tiny Christmas market: mulled wine, schoolchildren, the local shooting club, and a coziness the big cities charge admission for. Right beside it sits the Deutsches Haus, a proper Rhineland inn. File that away — future you, sweaty and starving, will thank present you.` },
+Its namesake, Saint Martin of Tours, was a Roman soldier who famously cut his cloak in half to share with a freezing beggar — later a bishop, and the patron saint of generosity. Every November, children parade past with paper lanterns in his honour. A copper relief on the church shows that very cloak-cutting scene.` },
+  { n:"Alt-St. Martin", de:"Alt St. Martin, Alt-Kaarst", cat:"The Old Village", lat:51.234213, lng:6.616723,
+    text:`Now you've reached Alt-Kaarst — old Kaarst — and its true treasure: Alt St. Martin, the original parish church, and it is genuinely ancient. Building inscriptions record the dates 1007 and 1146, and the main body is a small Romanesque three-aisled basilica raised in the 11th century, on a rise called the Kirchberg, atop an even older burial ground. Some historians think a church stood here as far back as the time of Charlemagne, around the year 800.
+
+Here's the twist: it's old and new at once. After the congregation moved out in 1957, the abandoned church decayed, and between 1961 and 1969 it was stripped back and painstakingly reconstructed to its high-medieval form — which is why the ancient stones look freshly laid. Note the tower: its ground and upper floors have arrow slits. In turbulent centuries this church tower doubled as a defensive refuge — a Wehrturm — where villagers sheltered from raiding bands.
+
+Beside it sits the Deutsches Haus, a proper Rhineland inn. File that away — future you, sweaty and starving, will thank present you.` },
   { n:"Nordkanal Path", de:"Der Nordkanal", cat:"Napoleon's Canal", lat:51.227050, lng:6.593634,
-    text:`You're now gliding along the Nordkanal, and here's the plot twist: this dead-straight canal was Napoleon's idea. In the early 1800s he wanted to link the Rhine all the way to Antwerp by water. Ambitious. Unfortunately for him, the empire collapsed before the canal was finished — proving that even emperors have projects they don't quite wrap up.
+    text:`You're now gliding along the Nordkanal — the "Grand Canal du Nord" — and this is the moment little Kaarst brushed against world history. It was Napoleon's project. After he imposed the Continental Blockade against Britain in 1806, he needed a war-and-trade waterway linking the Rhine to the Meuse and onward to the naval port of Antwerp, bypassing the vulnerable Dutch river mouths.
 
-His loss is your gain. What's left is flat, shaded, blissfully quiet, and sprinkled with modern art on the little bridges. This is the smoothest, laziest kilometre of the entire route, so stop pedalling so hard and enjoy it. Napoleon would have killed for a bike this nice.` },
-  { n:"Vorster Wald", de:"Vorst Forest", cat:"Into the Green", lat:51.225850, lng:6.591670,
+The dates are precise: Napoleon's chief engineer Aimable Hageau began surveying in spring 1808, the foundation stone was laid at Neuss on 3 July 1809, and crews dug hard for over a year. Then history intervened — on 9 July 1810 France simply annexed Holland, which handed Napoleon the Dutch seaports outright. The canal's whole purpose evaporated overnight, and work stopped on 1 January 1811 with about a third dug and twelve and a half million francs spent.
+
+His unfinished folly is your reward: a flat, shaded, dead-straight path, now part of the cross-border "Fietsallee am Nordkanal" cycle route. You're literally riding in Napoleon's tracks — on a far better bike than he ever had.` },
+  { n:"Vorster Wald", de:"Vorster Wald", cat:"Into the Green", lat:51.225850, lng:6.591670,
     text:`Off to your side is the Vorster Wald, Kaarst's beloved local forest. It's not enormous, but it's green, alive, and run — socially speaking — by the town's dogs, who all know each other and, frankly, have a better networking scene than most humans.
 
-In spring the trees are loud with birdsong and quietly busy with wildlife. This is the town's set of lungs, which is more than can be said for yours right about now. If you fancy a detour, the soft forest tracks are perfect for a slow, cool spin under the canopy before you make your grand entrance at the lake.` },
+A quieter historical note, honestly framed: the whole left-bank Rhineland around here was frontline territory in the Second World War, and this region — like most of wartime Germany — depended heavily on forced labourers, the largest group of whom were civilians and prisoners of war from Poland and the Soviet Union. That specific history belongs to the wider Neuss district rather than to this particular wood, but as you ride these peaceful lanes it's worth remembering they weren't always peaceful.
+
+Back to the present: in spring the trees are loud with birdsong. This is the town's set of lungs, which is more than can be said for yours right about now. The soft tracks make a lovely cool detour before your grand entrance at the lake.` },
   { n:"Kaarster See", de:"Lake Kaarst", cat:"The Big Blue", lat:51.228838, lng:6.584793,
     text:`And here it is — the Kaarster See, your shiny reward for not turning back at stop three. Fun fact: this gorgeous lake used to be a gravel pit. Give it a few decades and even a hole in the ground can reinvent itself into the town's summer living room. There's hope for all of us.
 
 In warm months you get a real sandy beach, swimming, rentable loungers, and Pommes with a cold drink by the water — the athlete's recovery meal, obviously. This is roughly the halfway point, so stop, stretch, let the sand between your toes, and quietly negotiate with your legs about the second half.` },
-  { n:"Braunsmühle Windmill", de:"Die Braunsmühle, Büttgen", cat:"Landmark", lat:51.197599, lng:6.625328,
-    text:`As you roll south into Büttgen, watch for the Braunsmühle — a beautifully kept windmill that is, without exaggeration, the most photographed object in Kaarst. Painters set up their easels here so often that the mill is basically a working celebrity. Do not tilt at it. Different book.
+  { n:"Braunsmühle Windmill", de:"Die BraunsMühle, Büttgen", cat:"Landmark", lat:51.197599, lng:6.625328,
+    text:`As you roll south into Büttgen, watch for the BraunsMühle — the most photographed object in Kaarst, and a real survivor. A windmill has stood on this spot since about 1580, but the early wooden ones kept burning down; one even burned on St. Nicholas' Day, 6 December 1627. So in 1756 the Counts of Dyck, who held the local milling monopoly, rebuilt it properly in stone as a Dutch-style tower mill. The builders used a gloriously specific 161,608 bricks, 9,000 pounds of iron, and 680 feet of oak.
 
-It's lovingly maintained by a team of volunteers, and on select Sundays it opens for tours while a little café serves homemade cake beneath the turning sails. Cake, a view, and a chair — I'm not saying you've earned it, but your legs are making a very compelling argument.` },
+Under that monopoly — a "Bannmühle" — villagers of Büttgen and nearby hamlets were legally required to grind their grain here and nowhere else. It ran on pure wind power until 1930, then a motor, and stopped milling in the mid-1950s. Listed as a monument on 4 July 1984, it was fully restored between 2001 and 2005 by a 300-strong volunteer association, and its sails turn again today.
+
+On summer Sunday afternoons the mill opens for tours and the café serves homemade cake beneath those turning sails. Cake, a view, and a chair — your legs are making a very compelling argument.` },
   { n:"Back to the Neumarkt", de:"Zurück zum Zentrum", cat:"Journey's End", lat:51.225989, lng:6.619007,
     text:`And you've closed the loop — back at the Neumarkt, older, wiser, and considerably more aerodynamic than when you left. Medieval chapel, Napoleon's canal, a forest, a beach and a celebrity windmill, all in one afternoon. Not bad for a town most people can't find on a map.
 
@@ -195,12 +207,9 @@ function initMap(){
       ]
     });
 
-    // route loop (rust dashed) through stops, closed
-    const path=STOPS.map(s=>({lat:s.lat,lng:s.lng})); path.push(path[0]);
-    new google.maps.Polyline({
-      map, path, geodesic:true, strokeOpacity:0,
-      icons:[{icon:{path:'M 0,-1 0,1',strokeOpacity:.9,strokeColor:'#c05a2e',scale:3},offset:'0',repeat:'14px'}]
-    });
+    // Draw the routed path along real streets/paths (see drawRoute below).
+    // Falls back to a straight dashed line per-leg if routing fails.
+    drawRoute();
 
     // numbered stop markers
     STOPS.forEach((s,i)=>{
@@ -229,6 +238,64 @@ function initMap(){
   }
 }
 window.initMap=initMap;
+
+// Build the loop as real routed paths between consecutive stops.
+// Uses WALKING mode (follows footpaths, canal paths, quiet streets that
+// cyclists use here; Google retired bicycling routing for this region).
+// Each leg that can't be routed falls back to a straight dashed segment.
+function drawRoute(){
+  let ds;
+  try{ ds=new google.maps.DirectionsService(); }catch(e){ ds=null; }
+  const legs=[];
+  for(let i=0;i<STOPS.length;i++){
+    legs.push([STOPS[i], STOPS[(i+1)%STOPS.length]]); // closed loop
+  }
+  let totalMeters=0, totalSecs=0, routedCount=0, doneCount=0;
+  function straightLeg(a,b){
+    new google.maps.Polyline({
+      map, path:[{lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng}],
+      geodesic:true, strokeOpacity:0,
+      icons:[{icon:{path:'M 0,-1 0,1',strokeOpacity:.85,strokeColor:'#c05a2e',scale:3},offset:'0',repeat:'14px'}]
+    });
+    // rough straight-line distance so the total still means something
+    const R=6371000, dLat=(b.lat-a.lat)*Math.PI/180, dLon=(b.lng-a.lng)*Math.PI/180;
+    const la1=a.lat*Math.PI/180, la2=b.lat*Math.PI/180;
+    const h=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;
+    totalMeters+=R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));
+  }
+  function updateSummary(){
+    const km=(totalMeters/1000);
+    // cycling pace ~15 km/h for the loop estimate (walking secs would overstate time)
+    const rideMin=Math.round(km/15*60);
+    const el=$('routeMeta');
+    if(el) el.textContent=`≈ ${km.toFixed(1)} km · about ${rideMin} min riding (excluding stops)`;
+  }
+  function routedLeg(a,b,done){
+    if(!ds){ straightLeg(a,b); done(); return; }
+    ds.route({
+      origin:{lat:a.lat,lng:a.lng}, destination:{lat:b.lat,lng:b.lng},
+      travelMode: google.maps.TravelMode.WALKING
+    },(res,status)=>{
+      if(status==='OK' && res.routes && res.routes[0]){
+        new google.maps.Polyline({
+          map, path: res.routes[0].overview_path,
+          strokeColor:'#c05a2e', strokeOpacity:.9, strokeWeight:5
+        });
+        const leg=res.routes[0].legs && res.routes[0].legs[0];
+        if(leg && leg.distance){ totalMeters+=leg.distance.value; routedCount++; }
+      } else {
+        straightLeg(a,b); // fallback keeps the loop visible + counted
+      }
+      done();
+    });
+  }
+  let idx=0;
+  (function next(){
+    if(idx>=legs.length){ updateSummary(); return; }
+    const [a,b]=legs[idx++];
+    routedLeg(a,b,()=>{ doneCount++; updateSummary(); setTimeout(next,180); });
+  })();
+}
 
 // If the Google script fails entirely (bad key / offline), show a message
 function gmFailGuard(){
@@ -325,9 +392,11 @@ function speechNormalize(t){
   s=s.replace(/\bSt-/g,'Saint ');
   // German place-name pronunciation hints (spelled for an English voice)
   const say={
-    'Kaarst':'Karst',
     'Kaarster See':'Karster Zay',
+    'Kaarst':'Karst',
     'Büttgen':'Bootgen',
+    'Holzbüttgen':'Holts-bootgen',
+    'BraunsMühle':'Browns-moola',
     'Braunsmühle':'Browns-moola',
     'Nordkanal':'Nord-kanal',
     'Neumarkt':'Noy-markt',
@@ -335,6 +404,15 @@ function speechNormalize(t){
     'Rhineland':'Rhine-land',
     'Deutsches Haus':'Doytshes House',
     'Vorster Wald':'Forster Vald',
+    'Wehrturm':'Vair-toorm',
+    'Kirchberg':'Keerkh-berg',
+    'Bannmühle':'Bann-moola',
+    'Fietsallee':'Feets-allay',
+    'Aimable Hageau':'Emable Ah-zho',
+    'Wilhelm Gilges':'Vil-helm Gil-ghes',
+    'Dyck':'Deek',
+    'Rhein-Kreis Neuss':'Rine-Krice Noyss',
+    'Neuss':'Noyss',
     'Pommes':'Pom fritz',
     'Danke schön':'Dunka shern'
   };
@@ -398,7 +476,7 @@ render(0);
 <!--  Keep the rest of the line exactly as-is.                     -->
 <!-- ============================================================= -->
 <script async
-  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC3a1AC9GQx2OlSOpZksacx2uuSisY0_mg&callback=initMap&loading=async">
+  src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&callback=initMap&loading=async">
 </script>
 </body>
 </html>
