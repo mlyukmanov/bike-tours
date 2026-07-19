@@ -7,9 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Kaarst Tour">
 <title>Kaarst Bike Tour</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
+/* === PASTE YOUR GOOGLE MAPS API KEY BELOW (see hosting notes) === */
   :root{
     --ink:#1b2a1f; --paper:#f4f1e8; --moss:#4a6b3d; --moss-dk:#365029;
     --rust:#c05a2e; --gold:#d8a548; --line:#d8d2c0;
@@ -26,7 +25,7 @@
   header .hbtns{display:flex;gap:4px;}
   header .hbtn{font-size:20px;background:none;border:none;color:var(--gold);cursor:pointer;padding:4px 8px;}
   #map{flex:1;width:100%;background:#dfe8d8;}
-  .leaflet-control-attribution{font-size:9px;}
+  .gm-style .gm-style-iw{font-family:inherit;}
   /* sheet */
   #sheet{background:var(--paper);border-top:1px solid var(--line);box-shadow:0 -4px 16px rgba(0,0,0,.12);z-index:1000;max-height:52dvh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);}
   #grip{width:40px;height:4px;background:var(--line);border-radius:3px;margin:8px auto 4px;}
@@ -79,10 +78,10 @@
   <header>
     <div>
       <div class="title">Kaarst by Bike 🚲</div>
-      <div class="sub">Cycling tour · ~15 km loop · audio guide</div>
+      <div class="sub">Bike tour · ~15 km loop · audio guide</div>
     </div>
     <div class="hbtns">
-      <button class="hbtn" id="layerBtn" title="Map style">🗺️</button>
+      <button class="hbtn" id="layerBtn" title="Satellite / street">🛰️</button>
       <button class="hbtn" id="locBtn" title="My location">📍</button>
     </div>
   </header>
@@ -130,8 +129,8 @@
       <li>Flip the <b>ring/silent switch</b> off and raise the volume.</li>
       <li>Tap <b>Play</b> once directly (iOS needs a tap to allow audio).</li>
     </ul>
-    <h3>Map style</h3>
-    <p>Tap 🗺️ in the header to switch between the <b>cycling map</b> (bike paths highlighted) and a <b>plain street map</b>.</p>
+    <h3>Map view</h3>
+    <p>Tap 🛰️ in the header to switch between the <b>street map</b> and <b>satellite</b> view.</p>
   </div>
 </div>
 
@@ -177,45 +176,88 @@ It's lovingly maintained by a team of volunteers, and on select Sundays it opens
 Now, the important part: refuelling. Right here, LIBA does a lovely Riesling and a proper meal, while up in Alt-Kaarst the Deutsches Haus pours real Rhineland beer in portions sized for people who've, say, just cycled fifteen kilometres. Lean the bike, sit down, order the big thing. You've genuinely earned it. Danke schön, and safe travels.` }
 ];
 
-/* ================= MAP ================= */
-let map=null, markers=[], meMarker=null, mapOK=false, layers={}, curLayer='cycle';
-function initMap(){
-  if(typeof L==='undefined'||!L.map){
-    const el=$('map'); el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center'; el.style.padding='20px'; el.style.textAlign='center';
-    el.innerHTML='<div style="color:#365029;font-size:14px;line-height:1.5">🗺️ Map needs internet to load its library.<br>Check your connection and reload. The audio guide still works below.</div>';
-    return;
-  }
-  try{
-    map=L.map('map',{zoomControl:false}).setView([51.213,6.607],13);
-    L.control.zoom({position:'topleft'}).addTo(map);
-    // Cycling map (CyclOSM) — bike paths highlighted
-    layers.cycle=L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',{
-      maxZoom:20, subdomains:'abc', attribution:'© OpenStreetMap, CyclOSM'
-    });
-    // Plain street map fallback
-    layers.street=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
-      maxZoom:19, attribution:'© OpenStreetMap'
-    });
-    layers.cycle.addTo(map);
+/* ================= MAP (Google Maps) ================= */
+let map=null, markers=[], meMarker=null, mapOK=false, mapType='roadmap';
 
+// Google Maps calls this automatically once its script loads
+function initMap(){
+  try{
+    map=new google.maps.Map($('map'),{
+      center:{lat:51.213,lng:6.607}, zoom:13,
+      mapTypeId:'roadmap',
+      disableDefaultUI:true, zoomControl:true, gestureHandling:'greedy',
+      styles:[ // subtle warm styling + emphasize bike/paths readability
+        {featureType:'poi.business',stylers:[{visibility:'off'}]},
+        {featureType:'transit',stylers:[{visibility:'off'}]},
+        {featureType:'water',elementType:'geometry',stylers:[{color:'#a9d3e0'}]},
+        {featureType:'landscape.natural',elementType:'geometry',stylers:[{color:'#e8ecdd'}]},
+        {featureType:'poi.park',elementType:'geometry',stylers:[{color:'#c3ddab'}]}
+      ]
+    });
+
+    // route loop (rust dashed) through stops, closed
+    const path=STOPS.map(s=>({lat:s.lat,lng:s.lng})); path.push(path[0]);
+    new google.maps.Polyline({
+      map, path, geodesic:true, strokeOpacity:0,
+      icons:[{icon:{path:'M 0,-1 0,1',strokeOpacity:.9,strokeColor:'#c05a2e',scale:3},offset:'0',repeat:'14px'}]
+    });
+
+    // numbered stop markers
     STOPS.forEach((s,i)=>{
-      const icon=L.divIcon({className:'',html:`<div class="pin" id="pin${i}"><span>${i+1}</span></div>`,iconSize:[28,28],iconAnchor:[14,28]});
-      const m=L.marker([s.lat,s.lng],{icon}).addTo(map);
-      m.on('click',()=>goTo(i));
+      const m=new google.maps.Marker({
+        map, position:{lat:s.lat,lng:s.lng},
+        label:{text:String(i+1),color:'#fff',fontWeight:'700',fontSize:'13px'},
+        icon:{
+          path:'M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z',
+          fillColor:'#4a6b3d', fillOpacity:1, strokeColor:'#f4f1e8', strokeWeight:2,
+          scale:1.1, labelOrigin:new google.maps.Point(12,12), anchor:new google.maps.Point(12,36)
+        }
+      });
+      m.addListener('click',()=>goTo(i));
       markers.push(m);
     });
-    const pts=STOPS.map(s=>[s.lat,s.lng]); pts.push(pts[0]);
-    L.polyline(pts,{color:'#c05a2e',weight:4,opacity:.85,dashArray:'1,9',lineCap:'round'}).addTo(map);
-    map.fitBounds(L.latLngBounds(pts).pad(0.12));
-    mapOK=true;
-  }catch(e){ mapOK=false; }
-}
-initMap();
 
+    // fit to all stops
+    const b=new google.maps.LatLngBounds();
+    STOPS.forEach(s=>b.extend({lat:s.lat,lng:s.lng}));
+    map.fitBounds(b,60);
+    mapOK=true;
+    highlightPin(0);
+  }catch(e){
+    const el=$('map'); el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center'; el.style.padding='20px'; el.style.textAlign='center';
+    el.innerHTML='<div style="color:#365029;font-size:14px;line-height:1.5">🗺️ Map could not load.<br>Check the API key and your connection. The audio guide still works below.</div>';
+  }
+}
+window.initMap=initMap;
+
+// If the Google script fails entirely (bad key / offline), show a message
+function gmFailGuard(){
+  if(!mapOK && typeof google==='undefined'){
+    const el=$('map'); if(!el||el.dataset.msg)return; el.dataset.msg='1';
+    el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center'; el.style.padding='20px'; el.style.textAlign='center';
+    el.innerHTML='<div style="color:#365029;font-size:14px;line-height:1.5">🗺️ Map library didn\u2019t load.<br>Usually a missing/blocked API key. The audio guide still works below.</div>';
+  }
+}
+setTimeout(gmFailGuard,4000);
+
+function highlightPin(active){
+  markers.forEach((m,i)=>{
+    const on=i===active;
+    m.setIcon({
+      path:'M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z',
+      fillColor:on?'#c05a2e':'#4a6b3d', fillOpacity:1, strokeColor:'#f4f1e8', strokeWeight:2,
+      scale:on?1.35:1.1, labelOrigin:new google.maps.Point(12,12), anchor:new google.maps.Point(12,36)
+    });
+    m.setZIndex(on?999:1);
+  });
+}
+
+// header 🗺️ toggles roadmap <-> satellite/hybrid
 $('layerBtn').onclick=()=>{
   if(!mapOK)return;
-  if(curLayer==='cycle'){ map.removeLayer(layers.cycle); layers.street.addTo(map); curLayer='street'; toast('Street map'); }
-  else { map.removeLayer(layers.street); layers.cycle.addTo(map); curLayer='cycle'; toast('Cycling map'); }
+  mapType = mapType==='roadmap' ? 'hybrid' : 'roadmap';
+  map.setMapTypeId(mapType);
+  toast(mapType==='hybrid'?'Satellite view':'Street map');
 };
 
 /* ================= STATE / NAV ================= */
@@ -226,12 +268,11 @@ function render(i){
   $('sText').innerHTML=s.text.split('\n\n').map(p=>`<p>${p.trim()}</p>`).join('');
   $('counter').innerHTML=`STOP ${i+1} / ${STOPS.length}<span class="cat">${s.cat}</span>`;
   $('prevBtn').disabled=i===0; $('nextBtn').disabled=i===STOPS.length-1;
-  document.querySelectorAll('.pin').forEach(p=>p.classList.remove('active'));
-  const pin=$('pin'+i); if(pin)pin.classList.add('active');
+  if(mapOK)highlightPin(i);
   setPlayUI(false);
   document.querySelector('.stopbody').scrollTop=0;
 }
-function goTo(i){ stopAudio(); cur=i; render(i); if(mapOK&&map) map.flyTo([STOPS[i].lat,STOPS[i].lng],15,{duration:.6}); }
+function goTo(i){ stopAudio(); cur=i; render(i); if(mapOK&&map){ map.panTo({lat:STOPS[i].lat,lng:STOPS[i].lng}); map.setZoom(15); } }
 $('prevBtn').onclick=()=>{if(cur>0)goTo(cur-1);};
 $('nextBtn').onclick=()=>{if(cur<STOPS.length-1)goTo(cur+1);};
 
@@ -274,11 +315,43 @@ function speakNext(){
     speechSynthesis.speak(u);
   }catch(e){stopAudio();toast('Audio unavailable in this browser');}
 }
+// Fix how the TTS engine reads abbreviations and German names.
+// Only affects spoken audio — the on-screen text stays correctly written.
+function speechNormalize(t){
+  let s=' '+t+' ';
+  // "St." -> "Saint" (it wrongly expands to "Street"). Handles "Alt-St."
+  s=s.replace(/\bAlt-St\.\s*/g,'Alt Saint ');
+  s=s.replace(/\bSt\.\s*/g,'Saint ');
+  s=s.replace(/\bSt-/g,'Saint ');
+  // German place-name pronunciation hints (spelled for an English voice)
+  const say={
+    'Kaarst':'Karst',
+    'Kaarster See':'Karster Zay',
+    'Büttgen':'Bootgen',
+    'Braunsmühle':'Browns-moola',
+    'Nordkanal':'Nord-kanal',
+    'Neumarkt':'Noy-markt',
+    'Martinstag':'Martins-tahg',
+    'Rhineland':'Rhine-land',
+    'Deutsches Haus':'Doytshes House',
+    'Vorster Wald':'Forster Vald',
+    'Pommes':'Pom fritz',
+    'Danke schön':'Dunka shern'
+  };
+  // longer keys first so "Kaarster See" wins over "Kaarst"
+  Object.keys(say).sort((a,b)=>b.length-a.length).forEach(k=>{
+    s=s.replace(new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'), say[k]);
+  });
+  // strip the umlaut/accent marks that survive, so the engine doesn't choke
+  s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  return s.replace(/\s+/g,' ').trim();
+}
+
 function speakText(text){
   if(!TTS){toast('This browser has no speech support');return;}
   try{speechSynthesis.cancel();}catch(e){}
   if(!voices.length)loadVoices();
-  const full=text.replace(/\s*\n+\s*/g,' ').replace(/\s+/g,' ').trim();
+  const full=speechNormalize(text).replace(/\s*\n+\s*/g,' ').replace(/\s+/g,' ').trim();
   chunks=full.match(/[^.!?]+[.!?]+|\S+$/g)||[full];
   ci=0; speaking=true; setPlayUI(true); speakNext();
 }
@@ -306,14 +379,26 @@ $('locBtn').onclick=()=>{
   navigator.geolocation.getCurrentPosition(p=>{
     const {latitude:la,longitude:lo}=p.coords;
     try{
-      if(meMarker)map.removeLayer(meMarker);
-      meMarker=L.circleMarker([la,lo],{radius:8,color:'#fff',weight:3,fillColor:'#2a7ae2',fillOpacity:1}).addTo(map);
-      map.flyTo([la,lo],15,{duration:.6}); toast('You are here 📍');
+      if(meMarker)meMarker.setMap(null);
+      meMarker=new google.maps.Marker({
+        map, position:{lat:la,lng:lo},
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:7,fillColor:'#2a7ae2',fillOpacity:1,strokeColor:'#fff',strokeWeight:3}
+      });
+      map.panTo({lat:la,lng:lo}); map.setZoom(15); toast('You are here 📍');
     }catch(e){toast('Could not place you');}
   },()=>toast('Allow location access to use this'),{enableHighAccuracy:true,timeout:9000});
 };
 
 render(0);
+</script>
+
+<!-- ============================================================= -->
+<!--  GOOGLE MAPS LOADER                                           -->
+<!--  Replace YOUR_API_KEY_HERE below with your own key.           -->
+<!--  Keep the rest of the line exactly as-is.                     -->
+<!-- ============================================================= -->
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC3a1AC9GQx2OlSOpZksacx2uuSisY0_mg&callback=initMap&loading=async">
 </script>
 </body>
 </html>
