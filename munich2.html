@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Munich Full Day">
+<title>Munich Full-Day E-Bike Tour</title>
+<style>
+/* === PASTE YOUR GOOGLE MAPS API KEY BELOW (see hosting notes) === */
+  :root{
+    --ink:#1b2a1f; --paper:#f4f1e8; --moss:#4a6b3d; --moss-dk:#365029;
+    --rust:#c05a2e; --gold:#d8a548; --line:#d8d2c0;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--paper);color:var(--ink);overflow:hidden;}
+  #app{display:flex;flex-direction:column;height:100dvh;}
+  header{
+    background:var(--moss-dk);color:var(--paper);padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;
+    display:flex;align-items:center;justify-content:space-between;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,.25);
+  }
+  header .title{font-weight:700;font-size:17px;letter-spacing:.3px;}
+  header .sub{font-size:11px;opacity:.75;font-weight:400;margin-top:1px;}
+  header .hbtns{display:flex;gap:4px;}
+  header .hbtn{font-size:20px;background:none;border:none;color:var(--gold);cursor:pointer;padding:4px 8px;}
+  #map{flex:1;width:100%;background:#dfe8d8;}
+  .gm-style .gm-style-iw{font-family:inherit;}
+  /* sheet */
+  #sheet{background:var(--paper);border-top:1px solid var(--line);box-shadow:0 -4px 16px rgba(0,0,0,.12);z-index:1000;max-height:52dvh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);}
+  #grip{width:40px;height:4px;background:var(--line);border-radius:3px;margin:8px auto 4px;}
+  .stopnav{display:flex;align-items:center;justify-content:space-between;padding:2px 14px 8px;}
+  .navbtn{background:var(--moss);color:var(--paper);border:none;width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,.2);}
+  .navbtn:disabled{opacity:.3;}
+  .counter{font-size:12px;font-weight:600;color:var(--moss-dk);text-align:center;letter-spacing:.5px;}
+  .counter .cat{display:block;font-size:10px;font-weight:500;color:var(--rust);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+  .stopbody{overflow-y:auto;padding:0 18px 14px;-webkit-overflow-scrolling:touch;}
+  .stopname{font-size:20px;font-weight:700;color:var(--moss-dk);line-height:1.2;margin-bottom:2px;}
+  .stopde{font-size:12px;color:var(--rust);font-style:italic;margin-bottom:10px;}
+  .stoptext{font-size:15px;line-height:1.55;color:#33402f;}
+  .stoptext p{margin-bottom:9px;}
+  .audiobar{display:flex;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line);}
+  .playbtn{flex:1;background:var(--rust);color:#fff;border:none;padding:13px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .playbtn.playing{background:var(--moss-dk);}
+  .iconbtn{background:var(--moss-dk);color:var(--paper);border:none;width:48px;border-radius:12px;font-size:18px;cursor:pointer;}
+  /* overlays */
+  .overlay{position:fixed;inset:0;background:var(--paper);z-index:2000;transform:translateY(100%);transition:transform .3s ease;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);}
+  .overlay.open{transform:translateY(0);}
+  .ovhead{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 8px;}
+  .ovhead h2{font-size:19px;color:var(--moss-dk);}
+  .ovhead .x{background:none;border:none;font-size:26px;color:var(--ink);cursor:pointer;line-height:1;}
+  .ovmeta{padding:0 18px 12px;font-size:12px;color:var(--rust);border-bottom:1px solid var(--line);}
+  .ovlist{overflow-y:auto;padding:6px 0 env(safe-area-inset-bottom);}
+  .ovitem{display:flex;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line);cursor:pointer;align-items:center;}
+  .ovitem:active{background:#eae5d5;}
+  .ovnum{width:30px;height:30px;flex:none;border-radius:50%;background:var(--moss);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;}
+  .ovitem .nm{font-weight:600;font-size:15px;color:var(--moss-dk);}
+  .ovitem .de{font-size:11px;color:var(--rust);font-style:italic;}
+  .help{overflow-y:auto;padding:4px 20px 30px;-webkit-user-select:text;user-select:text;}
+  .help h3{color:var(--moss-dk);font-size:15px;margin:16px 0 6px;}
+  .help p,.help li{font-size:14px;line-height:1.55;color:#33402f;margin-bottom:7px;}
+  .help ol,.help ul{padding-left:20px;}
+  .help .path{background:#eae5d5;border-radius:6px;padding:1px 6px;font-size:13px;}
+  .vrow{display:flex;align-items:center;gap:8px;padding:9px 20px;}
+  .vrow select{flex:1;padding:9px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:14px;color:var(--ink);}
+  .vrow label{font-size:12px;color:var(--rust);font-weight:600;}
+  .testbtn{margin:4px 20px 12px;padding:11px;background:var(--moss);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;width:calc(100% - 40px);cursor:pointer;}
+  .pin{background:var(--moss);width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid var(--paper);box-shadow:0 2px 4px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;}
+  .pin span{transform:rotate(45deg);color:#fff;font-weight:700;font-size:13px;}
+  .pin.active{background:var(--rust);width:34px;height:34px;}
+  .pin.active span{font-size:15px;}
+  .toast{position:fixed;bottom:calc(52dvh + 20px);left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:20px;font-size:13px;z-index:3000;opacity:0;transition:opacity .3s;pointer-events:none;max-width:80%;text-align:center;}
+  .toast.show{opacity:.95;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <div class="title">Munich Full Day ⚡🚲</div>
+      <div class="sub">9 AM–4 PM e-bike day · 12 stops · audio guide</div>
+    </div>
+    <div class="hbtns">
+      <button class="hbtn" id="layerBtn" title="Satellite / street">🛰️</button>
+      <button class="hbtn" id="locBtn" title="My location">📍</button>
+    </div>
+  </header>
+  <div id="map"></div>
+  <div id="sheet">
+    <div id="grip"></div>
+    <div class="stopnav">
+      <button class="navbtn" id="prevBtn">‹</button>
+      <div class="counter" id="counter"></div>
+      <button class="navbtn" id="nextBtn">›</button>
+    </div>
+    <div class="stopbody">
+      <div class="stopname" id="sName"></div>
+      <div class="stopde" id="sDe"></div>
+      <div class="stoptext" id="sText"></div>
+    </div>
+    <div class="audiobar">
+      <button class="playbtn" id="playBtn">▶︎ Play narration</button>
+      <button class="iconbtn" id="setBtn" title="Voice & help">⚙︎</button>
+      <button class="iconbtn" id="listBtn" title="All stops">☰</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="listOv">
+  <div class="ovhead"><h2>All Stops</h2><button class="x" data-close="listOv">×</button></div>
+  <div class="ovmeta">Full-day e-bike loop · 9 AM–4 PM · start & finish at Stachus (Karlsplatz)<br><span id="routeMeta" style="color:var(--moss-dk);font-weight:600;">Calculating route distance…</span></div>
+  <div class="ovlist" id="ovList"></div>
+</div>
+
+<div class="overlay" id="setOv">
+  <div class="ovhead"><h2>Voice & Help</h2><button class="x" data-close="setOv">×</button></div>
+  <div class="vrow"><label>VOICE</label><select id="voiceSel"></select></div>
+  <button class="testbtn" id="voiceTest">🔊 Test this voice</button>
+  <div class="help">
+    <h3>Get a natural-sounding voice (one time, free)</h3>
+    <p>iOS has human-like voices that aren't installed by default:</p>
+    <ol>
+      <li>Open <span class="path">Settings → Accessibility → Spoken Content → Voices → English</span></li>
+      <li>Tap <b>English (United Kingdom)</b> → choose <b>Daniel</b> (British male), and download the <b>Premium</b> or <b>Enhanced</b> version — far more natural than the default.</li>
+      <li>Download it, come back here, open this menu, and pick it above.</li>
+    </ol>
+    <h3>No sound?</h3>
+    <ul>
+      <li>Flip the <b>ring/silent switch</b> off and raise the volume.</li>
+      <li>Tap <b>Play</b> once directly (iOS needs a tap to allow audio).</li>
+    </ul>
+    <h3>Map view</h3>
+    <p>Tap 🛰️ in the header to switch between the <b>street map</b> and <b>satellite</b> view.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id=>document.getElementById(id);
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);}
+
+/* ================= TOUR DATA ================= */
+const STOPS = [
+  { n:"Start: Karlsplatz (Stachus)", de:"Unlimited Biking, Karlsplatz 4", cat:"9:00 AM · Roll Out", lat:48.139752, lng:11.566989,
+    text:`Good morning, and welcome to your full day on two wheels. You're at Karlsplatz — though every real Münchner calls it "Stachus," after a long-gone innkeeper named Eustachius. Your e-bikes are waiting in the courtyard at Unlimited Biking. E-bikes are the perfect choice today: Munich is famously flat and bike-mad, with hundreds of kilometres of cycle paths, and the electric boost means the English Garden's north end and Schwabing won't cost you your legs.
+
+The grand gate beside you is the Karlstor, one of three surviving medieval city gates, first documented in 1301. Behind it stretches the Neuhauser Straße, one of Europe's oldest pedestrian shopping streets.
+
+A quick plan for the day: we'll ride the old town, the museum quarter of Maxvorstadt, the university and its resistance history, the length of the English Garden, then the royal Residenz palace to go inside, and finish through the hip Glockenbachviertel — back here by four. Helmets on, boost to level two, and let's go.` },
+  { n:"Marienplatz", de:"Marienplatz & Glockenspiel", cat:"9:15 AM · The Heart", lat:48.137034, lng:11.575813,
+    text:`Marienplatz, Munich's central square since the city's founding in 1158 by Henry the Lion, who forced the salt trade through his new market town. "München" means "by the monks" — hence the little monk on the city crest.
+
+The neo-Gothic New Town Hall towering over you was built from 1867 to 1908. Time your day around this: at 11 AM (and noon, and 5 PM in summer) its Glockenspiel comes alive — 43 bells and 32 figures re-enacting a 1568 royal wedding. If it's near eleven, linger; if not, you may catch it later. The golden column, the Mariensäule, was raised in 1638 in thanks for surviving Swedish occupation in the Thirty Years' War.
+
+We'll be back near here at the very end. For now, a quick look, then west to the cathedral.` },
+  { n:"Frauenkirche", de:"Dom zu Unserer Lieben Frau", cat:"9:35 AM · City Symbol", lat:48.138665, lng:11.573013,
+    text:`The twin onion-domed towers of the Frauenkirche are Munich's defining silhouette, built in red-brick Gothic in a hurry between 1468 and 1488, the domes added in 1525. By law no building in the old centre may rise above them, roughly 99 metres, which is why Munich has no downtown high-rises.
+
+Pop inside — it's free and quick — and find the Teufelstritt, the "Devil's Footstep," a dark mark where legend says the Devil stamped in glee, thinking the architect had built a windowless church, a trick of the massive pillars. For the engineer in the group, that "trick" is real structural geometry: the double row of tall octagonal brick piers is spaced so that, from the exact spot of the footprint, they line up and hide all the side windows — the piers carry the roof load down efficiently while the eye reads a wall of stone. Like most of the old town, the church was heavily bombed in the Second World War and rebuilt after 1945.
+
+Back on the bikes: we're heading northwest now, out of the medieval core and into the grand 19th-century museum quarter.` },
+  { n:"Maxvorstadt: Königsplatz & Kunstareal", de:"Königsplatz & Museum Quarter", cat:"9:55 AM · Museum Plazas", lat:48.145780, lng:11.565327,
+    text:`Welcome to Maxvorstadt, Munich's museum and university district — wide plazas, student cafés, and one of the densest concentrations of art in Europe, the Kunstareal, home to the three Pinakothek galleries, the Egyptian Museum and more. If any single indoor art stop tempts you, the Alte Pinakothek's old masters or the Pinakothek der Moderne are world-class — though we'll save our big interior for the Residenz later, to keep the day moving.
+
+The monumental square is Königsplatz, laid out for King Ludwig I in the 1810s–1860s in pure Greek Revival style — he dreamed of an "Athens on the Isar." A darker chapter: the Nazis made Königsplatz a parade ground and party-administration hub in the 1930s; the foundations of their buildings still edge the square, now home to the NS-Dokumentationszentrum, Munich's centre for documenting that history.
+
+Roll east now, toward the university.` },
+  { n:"University & The White Rose", de:"LMU & Geschwister-Scholl-Platz", cat:"10:30 AM · Courage & Revolution", lat:48.150800, lng:11.580600,
+    text:`Ludwigstraße and the Ludwig-Maximilians-University, with the Siegestor, the Victory Gate of 1852, just ahead — war-damaged, and pointedly re-inscribed: "Dedicated to victory, destroyed by war, urging peace."
+
+In this university's atrium, on 18 February 1943, students Hans and Sophie Scholl scattered anti-Nazi leaflets. They led the White Rose — die Weiße Rose — a non-violent resistance group. Caught, tried, and beheaded four days later; Sophie was 21. Replicas of their leaflets are set into the pavement before the entrance, on Geschwister-Scholl-Platz, the Scholl Siblings' Square. One member, Alexander Schmorell, was half-Russian, born in Orenburg, and is now honoured as a saint by the Russian Orthodox Church.
+
+A deeper Russian thread runs here: in this district, Schwabing, a young exile calling himself "Herr Meyer" lived from 1900 to 1902 — Vladimir Lenin. Here he launched the paper "Iskra," "The Spark," smuggling it into Tsarist Russia. The spark of the Russian Revolution was struck, for two years, in Munich.` },
+  { n:"English Garden North: Kleinhesseloher See", de:"Kleinhesseloher See, Schwabing-Freimann", cat:"11:15 AM · Lakeside", lat:48.160487, lng:11.598318,
+    text:`Now the e-bikes earn their keep. We ride north into Schwabing-Freimann and straight into the Englischer Garten along shaded gravel trails, following the stream. Created in 1789, this is one of the largest city parks on Earth, bigger than New York's Central Park.
+
+Here at its calm northern heart lies the Kleinhesseloher See, a pretty three-island boating lake. On its shore sits the Seehaus beer garden — a lovely spot for a first-half-of-the-day break: a coffee, a pretzel, or an early Radler by the water while rowboats drift past. This end of the park is quieter and greener than the tourist core, all meadows and dappled light.
+
+Rest if you like, then we roll south along the trails toward the park's famous landmarks.` },
+  { n:"Chinese Tower Beer Garden", de:"Chinesischer Turm", cat:"11:50 AM · Lunch Option", lat:48.152076, lng:11.592314,
+    text:`Rolling south, you reach the Chinesischer Turm, a 25-metre wooden pagoda first built in 1789–90. Around it sprawls one of Munich's most beloved beer gardens, seating around 7,000 under the chestnut trees, with a traditional oom-pah band up in the tower.
+
+This is a strong lunch stop. By long Bavarian tradition you may bring your own food to a beer garden and simply buy the drinks — but the self-service stalls here do fine roast chicken, Schweinshaxe, and pretzels the size of your head. If you'd rather eat lighter, grab something small and press on; the surfers are minutes away.
+
+Whatever you choose, you've reached the social heart of the park. Lock the bikes, find a bench in the shade, and enjoy.` },
+  { n:"Monopteros & Eisbachwelle", de:"Monopteros & die Eisbachwelle", cat:"12:40 PM · Temple & Surfers", lat:48.143478, lng:11.587730,
+    text:`Two gems close together as you leave the park. First, if you detour up the little hill, the Monopteros — a Greek-style rotunda temple built in the 1830s for King Ludwig I by architect Leo von Klenze, using stone left over from the Residenz. From its steps you get the classic postcard view back over the meadows to the city spires.
+
+Then, at the park's southern edge where the Eisbach rushes under the Prinzregentenstraße bridge, the Eisbachwelle: a permanent metre-high standing wave that Munich's surfers ride year-round in wetsuits, hundreds of miles from any sea. For any surfer in the group, this is hallowed ground — but it rides nothing like the ocean. There's no paddle-in and no green room; you drop in from the bank onto a wave that never moves, so it's pure balance, rail control and quick feet, and a wipe-out means the current flushes you downstream onto shallow concrete. Locals have surfed it since the 1970s; the city only made it legal in 2010. Watch how each rider bails sideways to let the next one in — there's a strict, unspoken queue.
+
+And a note for the water-polo players among you: Munich is serious aquatic-sports territory. At the 1972 Munich Olympics, the water polo was played here in the city — the Soviet Union took gold, and the United States came away with the bronze. The pool tournaments of those Games are the stuff of water-polo history.
+
+Watch a few rides, then it's a short ride to Odeonsplatz — and a heavier chapter of history.` },
+  { n:"Odeonsplatz & Feldherrnhalle", de:"Odeonsplatz", cat:"1:15 PM · Where History Turned Dark", lat:48.141744, lng:11.577341,
+    text:`Odeonsplatz, and the grand loggia is the Feldherrnhalle, built 1841–44 for King Ludwig I, modelled on Florence's Loggia dei Lanzi to honour the Bavarian army. History gave it a darker meaning.
+
+On 9 November 1923, Adolf Hitler led about 2,000 followers in an attempted coup, the Beer Hall Putsch, that ended right here in gunfire with state police: sixteen Nazis and four policemen killed. Hitler was jailed and wrote "Mein Kampf." After 1933 the Nazis made this a shrine with an SS honour guard everyone had to salute.
+
+And here is the quiet courage: to avoid saluting, Müncheners slipped down the back lane behind the hall, the Viscardigasse, nicknamed the "Drückebergergasse," Dodgers' Alley. A trail of bronze cobblestones marks that everyday defiance. Ride it if you can — then park up, because next door we go inside the palace of kings.` },
+  { n:"Residenz (go inside)", de:"Residenz München", cat:"1:30 PM · Palace of Kings", lat:48.141798, lng:11.579486,
+    text:`Here's the day's big interior, and worth every minute. The Residenz was the seat of the Wittelsbach dynasty, who ruled Bavaria for 738 years, from 1180 to 1918 — one of Europe's longest reigns. What began as a 1385 fortress grew into a palace of ten courtyards and 130 rooms.
+
+Buy the combined ticket (around 15 euros in 2026; under-18s free) for both the Residenzmuseum and the Treasury; it's open daily until 6 PM this time of year, with an audio guide included. Don't miss: the Antiquarium, a breathtaking 66-metre Renaissance banqueting hall from 1571, the oldest room in the palace; and the Schatzkammer, the Treasury, with over 1,250 treasures including the Wittelsbach crown jewels. Reckon on about two hours; you have time.
+
+Outside first, rub the noses of the bronze lions at the Residenzstraße portal — generations have done it for luck. Then step inside. Nearly all of it is a meticulous rebuild after wartime bombing: Munich remembering itself in gold and stucco.
+
+A note for any civil or structural engineer in the group: the Residenz is a masterclass in reconstruction engineering. After 1945, crews didn't just rebuild — they reverse-engineered vaults, load paths and foundations from rubble and old photographs, re-creating stone barrel vaults and the Antiquarium's 66-metre ceiling to carry their own weight again. And if structures are your thing, Munich has a genuine engineering pilgrimage a little north of here at the Olympiapark: Frei Otto and Günter Behnisch's 1972 Olympic roof is one of the most important lightweight tensile structures ever built — a sweeping cable-net "tent" of acrylic panels that carries load purely in tension. The neighbouring Olympia Schwimmhalle, where the 1972 swimming and water-polo finals were held, has a famous stressed-skin tension roof too. Worth a detour on another day.` },
+  { n:"Glockenbachviertel & Gärtnerplatz", de:"Glockenbachviertel", cat:"3:30 PM · Hip Munich", lat:48.131568, lng:11.575716,
+    text:`For your final stretch, we swing south into the Glockenbachviertel — Munich at its most relaxed and creative. This is the city's boutique, café and nightlife quarter, its lively LGBTQ heart, full of little design shops, third-wave coffee, vintage stores and street-side tables perfect for the end of a long ride.
+
+Its centrepiece is the Gärtnerplatz, a circular garden square laid out in 1860, anchored by the pretty State Theatre — the Gärtnerplatztheater of 1865. On a warm afternoon the grassy circle fills with locals sprawled in the sun, and it's the ideal place to reward yourself with an ice cream or a spritz and simply watch Munich be Munich.
+
+One easy roll remains to bring you home.` },
+  { n:"Finish: Back to Stachus", de:"Karlsplatz — & Hofbräuhaus if you dare", cat:"4:00 PM · Journey's End", lat:48.139752, lng:11.566989,
+    text:`And you've closed the loop, back at Stachus by four, e-bikes returned, legs surprisingly fresh. In one day you've ridden a thousand years: from a monk's market town and a Gothic cathedral, through a museum quarter and a university that defied a dictatorship, along Napoleon-era park trails and a river wave, into a royal palace, and out through the coolest corner of the modern city.
+
+If you've one ounce of energy left, the world's most famous beer hall, the Hofbräuhaus, is a short walk east — royal brewery since 1589, public since 1828, oom-pah band nightly. Order a Maß, the full litre, raise it, and say it properly: Prost!
+
+Munich holds its whole story in plain sight — the beauty and the reckoning both. Thanks for riding it with me. Safe travels, and gute Fahrt.` }
+];
+
+/* ================= MAP (Google Maps) ================= */
+let map=null, markers=[], meMarker=null, mapOK=false, mapType='roadmap';
+
+// Google Maps calls this automatically once its script loads
+function initMap(){
+  try{
+    map=new google.maps.Map($('map'),{
+      center:{lat:48.147,lng:11.582}, zoom:13,
+      mapTypeId:'roadmap',
+      disableDefaultUI:true, zoomControl:true, gestureHandling:'greedy',
+      styles:[ // subtle warm styling + emphasize bike/paths readability
+        {featureType:'poi.business',stylers:[{visibility:'off'}]},
+        {featureType:'transit',stylers:[{visibility:'off'}]},
+        {featureType:'water',elementType:'geometry',stylers:[{color:'#a9d3e0'}]},
+        {featureType:'landscape.natural',elementType:'geometry',stylers:[{color:'#e8ecdd'}]},
+        {featureType:'poi.park',elementType:'geometry',stylers:[{color:'#c3ddab'}]}
+      ]
+    });
+
+    // Draw the routed path along real streets/paths (see drawRoute below).
+    // Falls back to a straight dashed line per-leg if routing fails.
+    drawRoute();
+
+    // numbered stop markers
+    STOPS.forEach((s,i)=>{
+      const m=new google.maps.Marker({
+        map, position:{lat:s.lat,lng:s.lng},
+        label:{text:String(i+1),color:'#fff',fontWeight:'700',fontSize:'13px'},
+        icon:{
+          path:'M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z',
+          fillColor:'#4a6b3d', fillOpacity:1, strokeColor:'#f4f1e8', strokeWeight:2,
+          scale:1.1, labelOrigin:new google.maps.Point(12,12), anchor:new google.maps.Point(12,36)
+        }
+      });
+      m.addListener('click',()=>goTo(i));
+      markers.push(m);
+    });
+
+    // fit to all stops
+    const b=new google.maps.LatLngBounds();
+    STOPS.forEach(s=>b.extend({lat:s.lat,lng:s.lng}));
+    map.fitBounds(b,60);
+    mapOK=true;
+    highlightPin(0);
+  }catch(e){
+    const el=$('map'); el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center'; el.style.padding='20px'; el.style.textAlign='center';
+    el.innerHTML='<div style="color:#365029;font-size:14px;line-height:1.5">🗺️ Map could not load.<br>Check the API key and your connection. The audio guide still works below.</div>';
+  }
+}
+window.initMap=initMap;
+
+// Build the loop as real routed paths between consecutive stops.
+// Uses WALKING mode (follows footpaths, canal paths, quiet streets that
+// cyclists use here; Google retired bicycling routing for this region).
+// Each leg that can't be routed falls back to a straight dashed segment.
+function drawRoute(){
+  let ds;
+  try{ ds=new google.maps.DirectionsService(); }catch(e){ ds=null; }
+  const legs=[];
+  for(let i=0;i<STOPS.length;i++){
+    legs.push([STOPS[i], STOPS[(i+1)%STOPS.length]]); // closed loop
+  }
+  let totalMeters=0, totalSecs=0, routedCount=0, doneCount=0;
+  function straightLeg(a,b){
+    new google.maps.Polyline({
+      map, path:[{lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng}],
+      geodesic:true, strokeOpacity:0,
+      icons:[{icon:{path:'M 0,-1 0,1',strokeOpacity:.85,strokeColor:'#c05a2e',scale:3},offset:'0',repeat:'14px'}]
+    });
+    // rough straight-line distance so the total still means something
+    const R=6371000, dLat=(b.lat-a.lat)*Math.PI/180, dLon=(b.lng-a.lng)*Math.PI/180;
+    const la1=a.lat*Math.PI/180, la2=b.lat*Math.PI/180;
+    const h=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;
+    totalMeters+=R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));
+  }
+  function updateSummary(){
+    const km=(totalMeters/1000);
+    // cycling pace ~15 km/h for the loop estimate (walking secs would overstate time)
+    const rideMin=Math.round(km/15*60);
+    const el=$('routeMeta');
+    if(el) el.textContent=`≈ ${km.toFixed(1)} km · about ${rideMin} min riding (excluding stops)`;
+  }
+  function routedLeg(a,b,done){
+    if(!ds){ straightLeg(a,b); done(); return; }
+    ds.route({
+      origin:{lat:a.lat,lng:a.lng}, destination:{lat:b.lat,lng:b.lng},
+      travelMode: google.maps.TravelMode.WALKING
+    },(res,status)=>{
+      if(status==='OK' && res.routes && res.routes[0]){
+        new google.maps.Polyline({
+          map, path: res.routes[0].overview_path,
+          strokeColor:'#c05a2e', strokeOpacity:.9, strokeWeight:5
+        });
+        const leg=res.routes[0].legs && res.routes[0].legs[0];
+        if(leg && leg.distance){ totalMeters+=leg.distance.value; routedCount++; }
+      } else {
+        straightLeg(a,b); // fallback keeps the loop visible + counted
+      }
+      done();
+    });
+  }
+  let idx=0;
+  (function next(){
+    if(idx>=legs.length){ updateSummary(); return; }
+    const [a,b]=legs[idx++];
+    routedLeg(a,b,()=>{ doneCount++; updateSummary(); setTimeout(next,180); });
+  })();
+}
+
+// If the Google script fails entirely (bad key / offline), show a message
+function gmFailGuard(){
+  if(!mapOK && typeof google==='undefined'){
+    const el=$('map'); if(!el||el.dataset.msg)return; el.dataset.msg='1';
+    el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center'; el.style.padding='20px'; el.style.textAlign='center';
+    el.innerHTML='<div style="color:#365029;font-size:14px;line-height:1.5">🗺️ Map library didn\u2019t load.<br>Usually a missing/blocked API key. The audio guide still works below.</div>';
+  }
+}
+setTimeout(gmFailGuard,4000);
+
+function highlightPin(active){
+  markers.forEach((m,i)=>{
+    const on=i===active;
+    m.setIcon({
+      path:'M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z',
+      fillColor:on?'#c05a2e':'#4a6b3d', fillOpacity:1, strokeColor:'#f4f1e8', strokeWeight:2,
+      scale:on?1.35:1.1, labelOrigin:new google.maps.Point(12,12), anchor:new google.maps.Point(12,36)
+    });
+    m.setZIndex(on?999:1);
+  });
+}
+
+// header 🗺️ toggles roadmap <-> satellite/hybrid
+$('layerBtn').onclick=()=>{
+  if(!mapOK)return;
+  mapType = mapType==='roadmap' ? 'hybrid' : 'roadmap';
+  map.setMapTypeId(mapType);
+  toast(mapType==='hybrid'?'Satellite view':'Street map');
+};
+
+/* ================= STATE / NAV ================= */
+let cur=0;
+function render(i){
+  const s=STOPS[i];
+  $('sName').textContent=s.n; $('sDe').textContent=s.de;
+  $('sText').innerHTML=s.text.split('\n\n').map(p=>`<p>${p.trim()}</p>`).join('');
+  $('counter').innerHTML=`STOP ${i+1} / ${STOPS.length}<span class="cat">${s.cat}</span>`;
+  $('prevBtn').disabled=i===0; $('nextBtn').disabled=i===STOPS.length-1;
+  if(mapOK)highlightPin(i);
+  setPlayUI(false);
+  document.querySelector('.stopbody').scrollTop=0;
+}
+function goTo(i){ stopAudio(); cur=i; render(i); if(mapOK&&map){ map.panTo({lat:STOPS[i].lat,lng:STOPS[i].lng}); map.setZoom(15); } }
+$('prevBtn').onclick=()=>{if(cur>0)goTo(cur-1);};
+$('nextBtn').onclick=()=>{if(cur<STOPS.length-1)goTo(cur+1);};
+
+/* ================= AUDIO ================= */
+let speaking=false, chunks=[], ci=0, voices=[];
+const TTS=('speechSynthesis'in window)&&('SpeechSynthesisUtterance'in window);
+function rankVoice(v){
+  let s=0; const n=(v.name||'').toLowerCase(), l=(v.lang||'').toLowerCase();
+  if(/premium|enhanced|siri|natural|neural/.test(n)) s+=40;
+  // Strongly prefer UK English MALE as the default voice
+  if(/^en-gb/.test(l)) s+=30; else if(/^en/.test(l)) s+=10;
+  // Known British/English male voice names (Daniel is the iOS en-GB male default)
+  if(/daniel|arthur|oliver|george|james|ryan|thomas|graham|jamie|male/.test(n)) s+=40;
+  // Downrank clearly-female voices so a male wins when both exist
+  if(/samantha|karen|moira|serena|kate|martha|fiona|tessa|zoe|allison|susan|nora|joana|catherine|sonia|libby|aria|jenny|kathy|female/.test(n)) s-=25;
+  if(/compact|eloquence/.test(n)) s-=15;
+  return s;
+}
+function loadVoices(){
+  if(!TTS)return;
+  try{
+    voices=speechSynthesis.getVoices()||[];
+    const sel=$('voiceSel'); if(!sel)return; sel.innerHTML='';
+    const sorted=[...voices].map((v,idx)=>({v,idx})).sort((a,b)=>rankVoice(b.v)-rankVoice(a.v));
+    sorted.forEach(({v,idx})=>{const o=document.createElement('option');o.value=idx;o.textContent=`${v.name} (${v.lang})`;sel.appendChild(o);});
+    if(sorted.length&&sel.selectedIndex<0) sel.value=sorted[0].idx;
+  }catch(e){}
+}
+function currentVoice(){
+  const sel=$('voiceSel');
+  if(sel&&sel.value!==''&&voices[sel.value]) return voices[sel.value];
+  let best=null,bs=-1e9; voices.forEach(v=>{const s=rankVoice(v);if(s>bs){bs=s;best=v;}}); return best;
+}
+if(TTS){ loadVoices(); try{speechSynthesis.onvoiceschanged=loadVoices;}catch(e){} }
+function setPlayUI(on){const b=$('playBtn');if(!b)return;b.classList.toggle('playing',on);b.innerHTML=on?'■ Stop':'▶︎ Play narration';}
+function stopAudio(){speaking=false;chunks=[];ci=0;try{if(TTS)speechSynthesis.cancel();}catch(e){}setPlayUI(false);}
+function speakNext(){
+  if(!speaking||ci>=chunks.length){stopAudio();return;}
+  try{
+    const u=new SpeechSynthesisUtterance(chunks[ci]);
+    const v=currentVoice(); if(v){u.voice=v;u.lang=v.lang;} else u.lang='en-GB';
+    u.rate=0.95; u.pitch=1.03;
+    u.onend=()=>{ci++;speakNext();}; u.onerror=()=>{ci++;speakNext();};
+    speechSynthesis.speak(u);
+  }catch(e){stopAudio();toast('Audio unavailable in this browser');}
+}
+// Fix how the TTS engine reads abbreviations and German names.
+// Only affects spoken audio — the on-screen text stays correctly written.
+function speechNormalize(t){
+  let s=' '+t+' ';
+  // "St." -> "Saint" (it wrongly expands to "Street"). Handles "Alt-St."
+  s=s.replace(/\bAlt-St\.\s*/g,'Alt Saint ');
+  s=s.replace(/\bSt\.\s*/g,'Saint ');
+  s=s.replace(/\bSt-/g,'Saint ');
+  // German place-name pronunciation hints (spelled for an English voice)
+  const say={
+    'Kleinhesseloher See':'Kline-hessel-oh-er Zay',
+    'Olympia Schwimmhalle':'Oh-lum-pia Shvim-halla',
+    'Olympiapark':'Oh-lum-pia-park',
+    'Frei Otto':'Fry Otto',
+    'Günter Behnisch':'Goonter Bay-nish',
+    'Schwimmhalle':'Shvim-halla',
+    'Geschwister-Scholl-Platz':'Ge-shvister Scholl Plats',
+    'Glockenbachviertel':'Glocken-bakh-feer-tel',
+    'Gärtnerplatztheater':'Gairtner-plats-tay-ah-ter',
+    'Gärtnerplatz':'Gairtner-plats',
+    'Chinesischer Turm':'Shin-ay-zisher Toorm',
+    'Königsplatz':'Kern-igs-plats',
+    'Kunstareal':'Koonst-ar-ay-al',
+    'Maxvorstadt':'Max-for-shtat',
+    'Monopteros':'Mo-nop-ter-os',
+    'Leo von Klenze':'Lay-oh fon Klentsa',
+    'Neuhauser Straße':'Noy-howzer Shtrahsa',
+    'Karlstor':'Karls-tor',
+    'Stachus':'Shtakh-oos',
+    'Schweinshaxe':'Shvines-hax-a',
+    'Radler':'Rahd-ler',
+    'Seehaus':'Zay-house',
+    'Schatzkammer':'Shats-kammer',
+    'Antiquarium':'An-ti-kvar-ee-um',
+    'Residenzmuseum':'Rezi-dents-moo-zay-um',
+    'gute Fahrt':'goota Fart',
+    'Englischer Garten':'Eng-lisher Garten',
+    'Frauenkirche':'Frow-en-keerkh-a',
+    'Feldherrnhalle':'Felt-hairn-hall-a',
+    'Odeonsplatz':'Oh-day-ohns-plats',
+    'Eisbachwelle':'Ice-bakh-vell-a',
+    'Eisbach':'Ice-bakh',
+    'Hofbräuhaus':'Hof-broy-house',
+    'Hofbräu':'Hof-broy',
+    'Marienplatz':'Ma-ree-en-plats',
+    'Mariensäule':'Ma-ree-en-zoy-la',
+    'Neues Rathaus':'Noy-es Rat-house',
+    'Glockenspiel':'Glocken-shpeel',
+    'Residenzstraße':'Rezi-dents-shtrahsa',
+    'Residenz':'Rezi-dents',
+    'Ludwigstraße':'Lood-vig-shtrahsa',
+    'Prinzregentenstraße':'Prints-ray-genten-shtrahsa',
+    'Viscardigasse':'Vis-kardi-gassa',
+    'Drückebergergasse':'Drooka-bairger-gassa',
+    'Weiße Rose':'Vy-sa Ro-za',
+    'Wittelsbach':'Vittels-bakh',
+    'Siegestor':'Zee-ges-tor',
+    'Schwabing':'Shvah-bing',
+    'Teufelstritt':'Toy-fels-tritt',
+    'Iskra':'Iss-kra',
+    'München':'Moon-shen',
+    'Mönchen':'Mern-shen',
+    'Maß':'Mass',
+    'Isar':'Ee-zar',
+    'Orenburg':'Oren-boorg',
+    'Prost':'Prohst',
+    'Danke schön':'Dunka shern'
+  };
+  // longer keys first so multi-word names win over single words
+  Object.keys(say).sort((a,b)=>b.length-a.length).forEach(k=>{
+    s=s.replace(new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'), say[k]);
+  });
+  // strip the umlaut/accent marks that survive, so the engine doesn't choke
+  s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  return s.replace(/\s+/g,' ').trim();
+}
+
+function speakText(text){
+  if(!TTS){toast('This browser has no speech support');return;}
+  try{speechSynthesis.cancel();}catch(e){}
+  if(!voices.length)loadVoices();
+  const full=speechNormalize(text).replace(/\s*\n+\s*/g,' ').replace(/\s+/g,' ').trim();
+  chunks=full.match(/[^.!?]+[.!?]+|\S+$/g)||[full];
+  ci=0; speaking=true; setPlayUI(true); speakNext();
+}
+function playAudio(){ if(speaking){stopAudio();return;} speakText(STOPS[cur].n+'. '+STOPS[cur].text); }
+$('playBtn').onclick=playAudio;
+$('voiceTest').onclick=()=>{stopAudio();speaking=true;chunks=["This is how your Munich guide will sound. Ready for the full day?"];ci=0;setPlayUI(true);speakNext();};
+
+/* ================= OVERLAYS ================= */
+const ovList=$('ovList');
+STOPS.forEach((s,i)=>{
+  const d=document.createElement('div');d.className='ovitem';
+  d.innerHTML=`<div class="ovnum">${i+1}</div><div><div class="nm">${s.n}</div><div class="de">${s.de} · ${s.cat}</div></div>`;
+  d.onclick=()=>{goTo(i);$('listOv').classList.remove('open');};
+  ovList.appendChild(d);
+});
+$('listBtn').onclick=()=>$('listOv').classList.add('open');
+$('setBtn').onclick=()=>{loadVoices();$('setOv').classList.add('open');};
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).classList.remove('open'));
+
+/* ================= GEOLOCATION ================= */
+$('locBtn').onclick=()=>{
+  if(!navigator.geolocation){toast('Location not available');return;}
+  if(!mapOK||!map){toast('Map offline right now');return;}
+  toast('Finding you…');
+  navigator.geolocation.getCurrentPosition(p=>{
+    const {latitude:la,longitude:lo}=p.coords;
+    try{
+      if(meMarker)meMarker.setMap(null);
+      meMarker=new google.maps.Marker({
+        map, position:{lat:la,lng:lo},
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:7,fillColor:'#2a7ae2',fillOpacity:1,strokeColor:'#fff',strokeWeight:3}
+      });
+      map.panTo({lat:la,lng:lo}); map.setZoom(15); toast('You are here 📍');
+    }catch(e){toast('Could not place you');}
+  },()=>toast('Allow location access to use this'),{enableHighAccuracy:true,timeout:9000});
+};
+
+render(0);
+</script>
+
+<!-- ============================================================= -->
+<!--  GOOGLE MAPS LOADER                                           -->
+<!--  Replace YOUR_API_KEY_HERE below with your own key.           -->
+<!--  Keep the rest of the line exactly as-is.                     -->
+<!-- ============================================================= -->
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC3a1AC9GQx2OlSOpZksacx2uuSisY0_mg&callback=initMap&loading=async">
+</script>
+</body>
+</html>
