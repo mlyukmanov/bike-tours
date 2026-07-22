@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Salzburg Walk">
+<title>Salzburg Walking Tour</title>
+<style>
+/* === PASTE YOUR GOOGLE MAPS API KEY BELOW (see hosting notes) === */
+  :root{
+    --ink:#1b2a1f; --paper:#f4f1e8; --moss:#4a6b3d; --moss-dk:#365029;
+    --rust:#c05a2e; --gold:#d8a548; --line:#d8d2c0;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--paper);color:var(--ink);overflow:hidden;}
+  #app{display:flex;flex-direction:column;height:100dvh;}
+  header{
+    background:var(--moss-dk);color:var(--paper);padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;
+    display:flex;align-items:center;justify-content:space-between;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,.25);
+  }
+  header .title{font-weight:700;font-size:17px;letter-spacing:.3px;}
+  header .sub{font-size:11px;opacity:.75;font-weight:400;margin-top:1px;}
+  header .hbtns{display:flex;gap:4px;}
+  header .hbtn{font-size:20px;background:none;border:none;color:var(--gold);cursor:pointer;padding:4px 8px;}
+  #map{flex:1;width:100%;background:#dfe8d8;}
+  .gm-style .gm-style-iw{font-family:inherit;}
+  /* sheet */
+  #sheet{background:var(--paper);border-top:1px solid var(--line);box-shadow:0 -4px 16px rgba(0,0,0,.12);z-index:1000;max-height:52dvh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);}
+  #grip{width:40px;height:4px;background:var(--line);border-radius:3px;margin:8px auto 4px;}
+  .stopnav{display:flex;align-items:center;justify-content:space-between;padding:2px 14px 8px;}
+  .navbtn{background:var(--moss);color:var(--paper);border:none;width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,.2);}
+  .navbtn:disabled{opacity:.3;}
+  .counter{font-size:12px;font-weight:600;color:var(--moss-dk);text-align:center;letter-spacing:.5px;}
+  .counter .cat{display:block;font-size:10px;font-weight:500;color:var(--rust);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+  .stopbody{overflow-y:auto;padding:0 18px 14px;-webkit-overflow-scrolling:touch;}
+  .stopname{font-size:20px;font-weight:700;color:var(--moss-dk);line-height:1.2;margin-bottom:2px;}
+  .stopde{font-size:12px;color:var(--rust);font-style:italic;margin-bottom:10px;}
+  .stoptext{font-size:15px;line-height:1.55;color:#33402f;}
+  .stoptext p{margin-bottom:9px;}
+  .audiobar{display:flex;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line);}
+  .playbtn{flex:1;background:var(--rust);color:#fff;border:none;padding:13px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .playbtn.playing{background:var(--moss-dk);}
+  .iconbtn{background:var(--moss-dk);color:var(--paper);border:none;width:48px;border-radius:12px;font-size:18px;cursor:pointer;}
+  /* overlays */
+  .overlay{position:fixed;inset:0;background:var(--paper);z-index:2000;transform:translateY(100%);transition:transform .3s ease;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);}
+  .overlay.open{transform:translateY(0);}
+  .ovhead{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 8px;}
+  .ovhead h2{font-size:19px;color:var(--moss-dk);}
+  .ovhead .x{background:none;border:none;font-size:26px;color:var(--ink);cursor:pointer;line-height:1;}
+  .ovmeta{padding:0 18px 12px;font-size:12px;color:var(--rust);border-bottom:1px solid var(--line);}
+  .ovlist{overflow-y:auto;padding:6px 0 env(safe-area-inset-bottom);}
+  .ovitem{display:flex;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line);cursor:pointer;align-items:center;}
+  .ovitem:active{background:#eae5d5;}
+  .ovnum{width:30px;height:30px;flex:none;border-radius:50%;background:var(--moss);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;}
+  .ovitem .nm{font-weight:600;font-size:15px;color:var(--moss-dk);}
+  .ovitem .de{font-size:11px;color:var(--rust);font-style:italic;}
+  .help{overflow-y:auto;padding:4px 20px 30px;-webkit-user-select:text;user-select:text;}
+  .help h3{color:var(--moss-dk);font-size:15px;margin:16px 0 6px;}
+  .help p,.help li{font-size:14px;line-height:1.55;color:#33402f;margin-bottom:7px;}
+  .help ol,.help ul{padding-left:20px;}
+  .help .path{background:#eae5d5;border-radius:6px;padding:1px 6px;font-size:13px;}
+  .vrow{display:flex;align-items:center;gap:8px;padding:9px 20px;}
+  .vrow select{flex:1;padding:9px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:14px;color:var(--ink);}
+  .vrow label{font-size:12px;color:var(--rust);font-weight:600;}
+  .testbtn{margin:4px 20px 12px;padding:11px;background:var(--moss);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;width:calc(100% - 40px);cursor:pointer;}
+  .pin{background:var(--moss);width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid var(--paper);box-shadow:0 2px 4px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;}
+  .pin span{transform:rotate(45deg);color:#fff;font-weight:700;font-size:13px;}
+  .pin.active{background:var(--rust);width:34px;height:34px;}
+  .pin.active span{font-size:15px;}
+  .toast{position:fixed;bottom:calc(52dvh + 20px);left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:20px;font-size:13px;z-index:3000;opacity:0;transition:opacity .3s;pointer-events:none;max-width:80%;text-align:center;}
+  .toast.show{opacity:.95;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <div class="title">Salzburg on Foot 🚶</div>
+      <div class="sub">Old town walking tour · 12 stops · audio guide</div>
+    </div>
+    <div class="hbtns">
+      <button class="hbtn" id="layerBtn" title="Satellite / street">🛰️</button>
+      <button class="hbtn" id="locBtn" title="My location">📍</button>
+    </div>
+  </header>
+  <div id="map"></div>
+  <div id="sheet">
+    <div id="grip"></div>
+    <div class="stopnav">
+      <button class="navbtn" id="prevBtn">‹</button>
+      <div class="counter" id="counter"></div>
+      <button class="navbtn" id="nextBtn">›</button>
+    </div>
+    <div class="stopbody">
+      <div class="stopname" id="sName"></div>
+      <div class="stopde" id="sDe"></div>
+      <div class="stoptext" id="sText"></div>
+    </div>
+    <div class="audiobar">
+      <button class="playbtn" id="playBtn">▶︎ Play narration</button>
+      <button class="iconbtn" id="setBtn" title="Voice & help">⚙︎</button>
+      <button class="iconbtn" id="listBtn" title="All stops">☰</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="listOv">
+  <div class="ovhead"><h2>All Stops</h2><button class="x" data-close="listOv">×</button></div>
+  <div class="ovmeta">Walking tour · starts at Mirabell Gardens, ends at Mozartplatz<br><span id="routeMeta" style="color:var(--moss-dk);font-weight:600;">Calculating route distance…</span></div>
+  <div class="ovlist" id="ovList"></div>
+</div>
+
+<div class="overlay" id="setOv">
+  <div class="ovhead"><h2>Voice & Help</h2><button class="x" data-close="setOv">×</button></div>
+  <div class="vrow"><label>VOICE</label><select id="voiceSel"></select></div>
+  <button class="testbtn" id="voiceTest">🔊 Test this voice</button>
+  <div class="help">
+    <h3>Get a natural-sounding voice (one time, free)</h3>
+    <p>iOS has human-like voices that aren't installed by default:</p>
+    <ol>
+      <li>Open <span class="path">Settings → Accessibility → Spoken Content → Voices → English</span></li>
+      <li>Tap <b>English (United Kingdom)</b> → choose <b>Daniel</b> (British male), and download the <b>Premium</b> or <b>Enhanced</b> version — far more natural than the default.</li>
+      <li>Download it, come back here, open this menu, and pick it above.</li>
+    </ol>
+    <h3>No sound?</h3>
+    <ul>
+      <li>Flip the <b>ring/silent switch</b> off and raise the volume.</li>
+      <li>Tap <b>Play</b> once directly (iOS needs a tap to allow audio).</li>
+    </ul>
+    <h3>Map view</h3>
+    <p>Tap 🛰️ in the header to switch between the <b>street map</b> and <b>satellite</b> view.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id=>document.getElementById(id);
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);}
+
+/* ================= TOUR DATA ================= */
+const STOPS = [
+  { n:"Mirabell Palace & Gardens", de:"Schloss Mirabell", cat:"Start · A Palace Built for Love", lat:47.804584, lng:13.042310,
+    text:`Grüß Gott, and welcome to Salzburg. We begin across the river in the Mirabell Gardens, and they begin with a scandal. In 1606 the Prince-Archbishop Wolf Dietrich von Raitenau built this palace for Salome Alt — his mistress, with whom he had fifteen children. A celibate churchman, ruling as an absolute prince, openly keeping a family: Salzburg's clergy were not merely priests, they were sovereign rulers with armies, and some behaved accordingly. Wolf Dietrich later died imprisoned in the fortress you'll see all day on the hill. The gardens were redesigned in 1690 and opened to the public.
+
+Look for the Pegasus Fountain and the grand staircase — and yes, this is where the von Trapp children sang "Do-Re-Mi" in the 1965 film "The Sound of Music." A delicious local irony: Austrians were largely indifferent to the film for decades. Many Salzburgers have never seen it, and some are quietly bemused that the world knows their city through an American musical rather than through Mozart.
+
+A word on that name, Salzburg — "Salt Fortress." Everything here was built on salt, the white gold hauled down the Salzach river and taxed at the toll, first recorded in 755 AD. Remember that as you walk: the Baroque splendour ahead was paid for in salt.` },
+  { n:"Marko-Feingold-Steg", de:"Marko-Feingold-Steg (Makartsteg)", cat:"The Bridge & A Remarkable Man", lat:47.801700, lng:13.042158,
+    text:`Crossing the Salzach here, pause for the name on this bridge. Long called the Makartsteg — built in 1904, rebuilt in 2001 — it was renamed in 2021 for Marko Feingold, and his story is one of the most extraordinary of the twentieth century.
+
+Born in 1913 in what is now Slovakia and raised in Vienna, Feingold was arrested by the Gestapo in 1938 and survived four concentration camps: Auschwitz, Neuengamme, Dachau and Buchenwald, where American troops liberated him in April 1945. Every other member of his family was murdered. And here is the twist that brought him to this city: he set out to return home to Vienna, but the Red Army blockade around the Soviet occupation zone turned him back — a Soviet soldier told his group they had orders not to let them pass. So he got off the bus in Salzburg, which lay in the American zone, entirely by chance. He stayed for the rest of his life.
+
+From here he helped an estimated hundred thousand Jewish survivors escape through Austria to Palestine, later led Salzburg's Jewish community, and campaigned against racism into his second century. He died in 2019, aged 106. Look down at the padlocks tourists have clipped to these railings, then look up at the name on the bridge: the city chose to honour him rather than the painter it was named for. That choice says something about modern Austria's reckoning with itself.` },
+  { n:"Getreidegasse & Mozart's Birthplace", de:"Getreidegasse & Mozarts Geburtshaus", cat:"The Famous Street", lat:47.800007, lng:13.043558,
+    text:`You've entered the Getreidegasse, Salzburg's most famous lane — narrow, tall, and hung with those magnificent wrought-iron guild signs. Those signs are the medieval solution to widespread illiteracy: a pretzel meant a baker, a key a locksmith. The tradition is so fiercely protected that modern chains must comply — which is why even McDonald's here hangs a hand-forged iron sign instead of golden arches. It's a small, satisfying victory for good taste.
+
+At number nine, in the bright yellow house, Wolfgang Amadeus Mozart was born on 27 January 1756. The family lived on the third floor for twenty-six years. Inside you can see his childhood violin and family letters; reckon on thirty to forty-five minutes.
+
+A more complicated truth about Salzburg's golden boy: Mozart couldn't wait to leave. He found the city provincial and its Prince-Archbishop, Colloredo, insufferable — and in 1781 the row ended with Mozart being dismissed, by his own account, with a literal kick to the backside from the Archbishop's steward. He moved to Vienna and never lived here again. The city that now sells his face on every chocolate ball was, to him, the place he escaped.` },
+  { n:"Universitätsplatz & Kollegienkirche", de:"Universitätsplatz", cat:"Market & Baroque Genius", lat:47.799160, lng:13.041880,
+    text:`Just south of the Getreidegasse opens the Universitätsplatz, home to Salzburg's excellent green market — a working food market, not a tourist one, where locals still buy their produce, cheese and bread most mornings. Grab a bite: this is one of the best-value stops in the old town.
+
+The immense white church dominating the square is the Kollegienkirche, the university church, completed in 1707 by Johann Bernhard Fischer von Erlach — the greatest architect of the Austrian Baroque. Notice how the façade curves outward, bulging toward you like a swelling wave, and how sparse the white interior is compared with the gilded excess elsewhere. Fischer von Erlach was doing something radical: using pure geometry and light rather than gold to convey grandeur.
+
+The University itself was founded in 1622 by Prince-Archbishop Paris Lodron — the same ruler who kept Salzburg neutral and unsacked through the horrors of the Thirty Years' War, one of the shrewdest diplomatic performances of the era. Look for his coat of arms around the city: a lion whose tail curls into a pretzel.` },
+  { n:"Festival Halls & Horse Pond", de:"Festspielhäuser & Pferdeschwemme", cat:"Music & Marble Horses", lat:47.798674, lng:13.041074,
+    text:`This is the beating heart of musical Salzburg: the Festival Halls, home each summer to the Salzburger Festspiele, founded in 1920 and now among the most prestigious classical music and drama festivals on Earth. The Great Festival Hall was carved directly into the Mönchsberg cliff in the 1950s — engineers removed tons of conglomerate rock to make room, and the former royal stables were converted into foyers, their floors still mosaicked with horses' heads.
+
+Speaking of horses: the ornate basin nearby is the Pferdeschwemme, the horse pond of 1700 — an elaborately sculpted marble bath where the Prince-Archbishop's horses were washed. Only in Salzburg would the car wash be a Baroque monument.
+
+The Festival's most famous son was the conductor Herbert von Karajan, born in Salzburg in 1908, who dominated European classical music for decades and led the Festival until his death in 1989. He remains a complicated figure here: a titanic musician whose Nazi party membership during the war has never been fully reconciled with his legacy. Salzburg, like Austria itself, has learned to hold both facts at once.` },
+  { n:"St. Peter's Abbey & Cemetery", de:"Stift St. Peter & Petersfriedhof", cat:"The Oldest Corner", lat:47.796677, lng:13.045294,
+    text:`Through the arch and you're in the most atmospheric corner of the city: St. Peter's Abbey, founded around 696 AD by Saint Rupert, making it one of the oldest monasteries in the German-speaking world — and it has been in continuous operation ever since, over thirteen hundred years.
+
+The cemetery pressed against the cliff face is the Petersfriedhof, with its wrought-iron grave markers and flower beds tended with almost aggressive care. Set into the rock above are the Catacombs, early Christian chapels carved into the Mönchsberg. Among those buried here are Mozart's sister Nannerl — herself a prodigy who, as a woman in the eighteenth century, was quietly retired from performance while her brother toured Europe — and Michael Haydn, brother of the more famous Joseph.
+
+Film enthusiasts will recognise this cemetery as the inspiration for the scene where the von Trapps hide from their pursuers, though that sequence was actually shot on a Hollywood set.
+
+Beside it sits St. Peter Stiftskulinarium, which claims to be the oldest restaurant in Europe, with records going back to 803 AD. Charlemagne may plausibly have eaten on this spot. Reservations strongly advised.` },
+  { n:"Hohensalzburg Fortress", de:"Festung Hohensalzburg", cat:"The Unconquered Castle", lat:47.794948, lng:13.047658,
+    text:`Now the climb — either the funicular, or the footpath if your legs are feeling ambitious. Above you stands Hohensalzburg, begun in 1077 by Archbishop Gebhard von Helfenstein, and one of the largest fully preserved medieval fortresses in Europe.
+
+Why 1077? Because of the Investiture Controversy, the great power struggle over whether the Pope or the Holy Roman Emperor had the right to appoint bishops. Salzburg's archbishop sided with Pope Gregory VII against Emperor Henry IV, and prudently began building very thick walls. It worked: in over 900 years, Hohensalzburg has never been taken by force. Its only surrender came in 1800, when it was handed to Napoleon's troops without a fight to spare the city destruction — the garrison essentially concluded the view wasn't worth dying for.
+
+The best story here is the Stierwäscher, the "bull-washer." During the Peasants' War of the 1520s, rebels besieged the fortress hoping to starve it out. The defenders had one bull left. So each day they paraded it along the walls, having repainted it a different colour, until the besiegers concluded the castle had endless cattle and gave up. To this day, Salzburgers are nicknamed "Stierwäscher" — bull-washers — and they wear it with pride.
+
+From the ramparts: the whole Baroque city below, the Salzach winding north, and the Alps.` },
+  { n:"Nonnberg Abbey", de:"Stift Nonnberg", cat:"The Real Maria", lat:47.795500, lng:13.050600,
+    text:`A short walk along the ridge brings you to Nonnberg Abbey — founded around 714 AD by Saint Rupert, and the oldest continuously operating convent in the German-speaking world. Benedictine nuns have prayed here without interruption for thirteen centuries, through plagues, wars, and the collapse of empires.
+
+And here the film and the facts finally align: this is the genuine article. Maria Kutschera really was a novice at this convent, and she really did leave it, in 1926, to become governess to the seven children of the widowed naval officer Georg von Trapp — whom she married that same year in this abbey's church.
+
+The reality, as ever, was less tidy than the musical. Maria later wrote that she was not in love with Georg at the time; she was fond of the children and accepted on the advice of the Mother Superior. Georg was not the cold disciplinarian of the film but a warm, gentle man; the family lost their fortune in a bank collapse and turned to singing out of financial necessity, not just joy. And in 1938 they left Austria not by hiking over a mountain into Switzerland — geographically impossible from here, as the nearest Swiss border is hundreds of kilometres away — but rather more prosaically, by train to Italy. Georg held an Italian passport.
+
+If you're quiet and lucky, you may hear the nuns singing the office. That part needs no embellishment.` },
+  { n:"Kapitelplatz & Sphaera", de:"Kapitelplatz & die Sphaera", cat:"Chess, Gold & a Golden Ball", lat:47.797406, lng:13.046058,
+    text:`Back down at the foot of the fortress, the Kapitelplatz is one of the city's most relaxed squares — and home to a giant outdoor chess board where locals play with enormous pieces, often watched by a small crowd of self-appointed advisors. Anyone may play. Losing publicly to an Austrian pensioner is a rite of passage.
+
+The golden sphere with a man standing atop it is "Sphaera," created in 2007 by the German artist Stephan Balkenhol, part of a project scattering contemporary art through this Baroque city. Interpretations vary — man on top of the world, or man precariously balanced on it. In a city this reverent about its own past, a five-metre gold ball is a cheerfully provocative gesture.
+
+At the square's edge, look for the Kapitelschwemme, another elaborate horse-watering basin of 1732, this one topped by Neptune. Salzburg's Prince-Archbishops really did spend an extraordinary proportion of their salt revenue on making sure their horses bathed in style.` },
+  { n:"Salzburg Cathedral", de:"Salzburger Dom", cat:"Baroque Heart & War Wound", lat:47.797894, lng:13.046635,
+    text:`The Salzburger Dom is the city's spiritual centre and the masterpiece that set the tone for everything around you. A church has stood here since 774; after fire destroyed its predecessor, the current early-Baroque cathedral was consecrated in 1628, designed by the Italian architect Santino Solari. Its twin towers and vast dome brought the Italian Baroque north of the Alps and reshaped the entire city.
+
+Two facts to carry inside. First, Mozart was baptised here on 28 January 1756, the day after his birth, in the font that still stands near the entrance — and he later worked here as court organist. The cathedral has five organs; if one is being played during your visit, simply stop and listen.
+
+Second, look up at the dome. On 16 October 1944 an Allied bomb struck the cathedral and the dome collapsed. Salzburg endured fifteen air raids between 1944 and 1945; 547 people were killed and nearly half the city's buildings were damaged or destroyed, though most of the Baroque core survived. The dome you're looking at was rebuilt and the cathedral reconsecrated in 1959. Like Munich, like Dresden, much of what looks ancient here is in fact a careful act of repair — beauty deliberately reassembled after catastrophe.` },
+  { n:"Residenzplatz", de:"Residenzplatz & Residenzbrunnen", cat:"Power, Water & a Dark Square", lat:47.798494, lng:13.046658,
+    text:`This grand square was the seat of worldly power: the Residenz, the city palace where the Prince-Archbishops actually lived, ruling Salzburg as a sovereign state within the Holy Roman Empire until Napoleon dissolved it in 1803.
+
+The magnificent fountain is the Residenzbrunnen, carved around 1661 by Tommaso di Garona from Untersberg marble — four snorting horses bursting from the rock, giants shouldering the basin, and a triton at the summit blasting water from a conch shell. It is among the largest Baroque fountains outside Italy, and film-lovers will recognise it: Maria splashes past it singing "I Have Confidence."
+
+But this square holds a much darker memory, and Salzburg does not hide it. On 30 April 1938, weeks after the Anschluss — Nazi Germany's annexation of Austria in March that year — a book burning was staged right here on the Residenzplatz, works by Jewish and dissenting authors thrown onto a pyre. A memorial set into the ground marks the spot. Stand by the fountain and hold the two facts together: exuberant Baroque beauty and, on the same stones, one of the twentieth century's uglier rituals. That honesty is Salzburg at its best.` },
+  { n:"Mozartplatz & Journey's End", de:"Mozartplatz", cat:"Journey's End", lat:47.798100, lng:13.047700,
+    text:`We finish at Mozartplatz, beneath the bronze statue of the man himself, unveiled in 1842 — an event attended by his widow Constanze, who lived out her final years in Salzburg and died the following year. A neat symmetry: the city Mozart fled eventually welcomed his family home.
+
+A closing thought on this remarkable place. Salzburg was ruled for centuries by prince-archbishops who were priests and princes at once, grew fabulously wealthy on salt, produced the most naturally gifted composer in Western music and promptly drove him away, was annexed in 1938, bombed in 1944, liberated by American troops in May 1945, and became the headquarters of the American occupation zone. It then rebuilt its shattered domes stone by stone and reinvented itself through a music festival — and, to its enduring bemusement, through a Hollywood musical most locals have never watched.
+
+Rewards for the walk: Café Tomaselli on the Alter Markt, trading since 1700 and once frequented by the Mozart family, for coffee and a slice of cake; or the Stiegl-Keller below the fortress for a beer with a view. Try a Salzburger Nockerl if you dare — a colossal baked soufflé shaped like the three hills around the city, and roughly the size of one.
+
+Thank you for walking Salzburg with me. Servus, and safe travels.` }
+];
+
+/* ================= MAP (Google Maps) ================= */
+let map=null, markers=[], meMarker=null, mapOK=false, mapType='roadmap';
+
+// Google Maps calls this automatically once its script loads
+function initMap(){
+  try{
+    map=new google.maps.Map($('map'),{
+      center:{lat:47.7995,lng:13.0455}, zoom:15,
+      mapTypeId:'roadmap',
+      disableDefaultUI:true, zoomControl:true, gestureHandling:'greedy',
+      styles:[ // subtle warm styling + emphasize bike/paths readability
+        {featureType:'poi.business',stylers:[{visibility:'off'}]},
+        {featureType:'transit',stylers:[{visibility:'off'}]},
+        {featureType:'water',elementType:'geometry',stylers:[{color:'#a9d3e0'}]},
+        {featureType:'landscape.natural',elementType:'geometry',stylers:[{color:'#e8ecdd'}]},
+        {featureType:'poi.park',elementType:'geometry',stylers:[{color:'#c3ddab'}]}
+      ]
+    });
+
+    // Draw the routed path along real streets/paths (see drawRoute below).
+    // Falls back to a straight dashed line per-leg if routing fails.
+    drawRoute();
+
+    // numbered stop markers
+    STOPS.forEach((s,i)=>{
+      const m=new google.maps.Marker({
+        map, position:{lat:s.lat,lng:s.lng},
+        label:{text:String(i+1),color:'#fff',fontWeight:'700',fontSize:'13px'},
+        icon:{
+          path:'M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z',
+          fillColor:'#4a6b3d', fillOpacity:1, strokeColor:'#f4f1e8', strokeWeight:2,
+          scale:1.1, labelOrigin:new google.maps.Point(12,12), anchor:new google.maps.Point(12,36)
+        }
+      });
+      m.addListener('click',()=>goTo(i));
+      markers.push(m);
+    });
+
+    // fit to all stops
+    const b=new google.maps.LatLngBounds();
+    STOPS.forEach(s=>b.extend({lat:s.lat,lng:s.lng}));
+    map.fitBounds(b,60);
+    mapOK=true;
+    highlightPin(0);
+  }catch(e){
+    const el=$('map'); el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center'; el.style.padding='20px'; el.style.textAlign='center';
+    el.innerHTML='<div style="color:#365029;font-size:14px;line-height:1.5">🗺️ Map could not load.<br>Check the API key and your connection. The audio guide still works below.</div>';
+  }
+}
+window.initMap=initMap;
+
+// Build the loop as real routed paths between consecutive stops.
+// Uses WALKING mode (follows footpaths, canal paths, quiet streets that
+// cyclists use here; Google retired bicycling routing for this region).
+// Each leg that can't be routed falls back to a straight dashed segment.
+function drawRoute(){
+  let ds;
+  try{ ds=new google.maps.DirectionsService(); }catch(e){ ds=null; }
+  const legs=[];
+  for(let i=0;i<STOPS.length;i++){
+    if(i<STOPS.length-1) legs.push([STOPS[i], STOPS[i+1]]); // open route (A to B)
+  }
+  let totalMeters=0, totalSecs=0, routedCount=0, doneCount=0;
+  function straightLeg(a,b){
+    new google.maps.Polyline({
+      map, path:[{lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng}],
+      geodesic:true, strokeOpacity:0,
+      icons:[{icon:{path:'M 0,-1 0,1',strokeOpacity:.85,strokeColor:'#c05a2e',scale:3},offset:'0',repeat:'14px'}]
+    });
+    // rough straight-line distance so the total still means something
+    const R=6371000, dLat=(b.lat-a.lat)*Math.PI/180, dLon=(b.lng-a.lng)*Math.PI/180;
+    const la1=a.lat*Math.PI/180, la2=b.lat*Math.PI/180;
+    const h=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;
+    totalMeters+=R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));
+  }
+  function updateSummary(){
+    const km=(totalMeters/1000);
+    // walking pace ~4.5 km/h
+    const rideMin=Math.round(km/4.5*60);
+    const el=$('routeMeta');
+    if(el) el.textContent=`≈ ${km.toFixed(1)} km route · about ${rideMin} min walking between stops (excluding time at each)`;
+  }
+  function routedLeg(a,b,done){
+    if(!ds){ straightLeg(a,b); done(); return; }
+    ds.route({
+      origin:{lat:a.lat,lng:a.lng}, destination:{lat:b.lat,lng:b.lng},
+      travelMode: google.maps.TravelMode.WALKING
+    },(res,status)=>{
+      if(status==='OK' && res.routes && res.routes[0]){
+        new google.maps.Polyline({
+          map, path: res.routes[0].overview_path,
+          strokeColor:'#c05a2e', strokeOpacity:.9, strokeWeight:5
+        });
+        const leg=res.routes[0].legs && res.routes[0].legs[0];
+        if(leg && leg.distance){ totalMeters+=leg.distance.value; routedCount++; }
+      } else {
+        straightLeg(a,b); // fallback keeps the loop visible + counted
+      }
+      done();
+    });
+  }
+  let idx=0;
+  (function next(){
+    if(idx>=legs.length){ updateSummary(); return; }
+    const [a,b]=legs[idx++];
+    routedLeg(a,b,()=>{ doneCount++; updateSummary(); setTimeout(next,180); });
+  })();
+}
+
+// If the Google script fails entirely (bad key / offline), show a message
+function gmFailGuard(){
+  if(!mapOK && typeof google==='undefined'){
+    const el=$('map'); if(!el||el.dataset.msg)return; el.dataset.msg='1';
+    el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center'; el.style.padding='20px'; el.style.textAlign='center';
+    el.innerHTML='<div style="color:#365029;font-size:14px;line-height:1.5">🗺️ Map library didn\u2019t load.<br>Usually a missing/blocked API key. The audio guide still works below.</div>';
+  }
+}
+setTimeout(gmFailGuard,4000);
+
+function highlightPin(active){
+  markers.forEach((m,i)=>{
+    const on=i===active;
+    m.setIcon({
+      path:'M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z',
+      fillColor:on?'#c05a2e':'#4a6b3d', fillOpacity:1, strokeColor:'#f4f1e8', strokeWeight:2,
+      scale:on?1.35:1.1, labelOrigin:new google.maps.Point(12,12), anchor:new google.maps.Point(12,36)
+    });
+    m.setZIndex(on?999:1);
+  });
+}
+
+// header 🗺️ toggles roadmap <-> satellite/hybrid
+$('layerBtn').onclick=()=>{
+  if(!mapOK)return;
+  mapType = mapType==='roadmap' ? 'hybrid' : 'roadmap';
+  map.setMapTypeId(mapType);
+  toast(mapType==='hybrid'?'Satellite view':'Street map');
+};
+
+/* ================= STATE / NAV ================= */
+let cur=0;
+function render(i){
+  const s=STOPS[i];
+  $('sName').textContent=s.n; $('sDe').textContent=s.de;
+  $('sText').innerHTML=s.text.split('\n\n').map(p=>`<p>${p.trim()}</p>`).join('');
+  $('counter').innerHTML=`STOP ${i+1} / ${STOPS.length}<span class="cat">${s.cat}</span>`;
+  $('prevBtn').disabled=i===0; $('nextBtn').disabled=i===STOPS.length-1;
+  if(mapOK)highlightPin(i);
+  setPlayUI(false);
+  document.querySelector('.stopbody').scrollTop=0;
+}
+function goTo(i){ stopAudio(); cur=i; render(i); if(mapOK&&map){ map.panTo({lat:STOPS[i].lat,lng:STOPS[i].lng}); map.setZoom(15); } }
+$('prevBtn').onclick=()=>{if(cur>0)goTo(cur-1);};
+$('nextBtn').onclick=()=>{if(cur<STOPS.length-1)goTo(cur+1);};
+
+/* ================= AUDIO ================= */
+let speaking=false, chunks=[], ci=0, voices=[];
+const TTS=('speechSynthesis'in window)&&('SpeechSynthesisUtterance'in window);
+function rankVoice(v){
+  let s=0; const n=(v.name||'').toLowerCase(), l=(v.lang||'').toLowerCase();
+  if(/premium|enhanced|siri|natural|neural/.test(n)) s+=40;
+  // Strongly prefer UK English MALE as the default voice
+  if(/^en-gb/.test(l)) s+=30; else if(/^en/.test(l)) s+=10;
+  // Known British/English male voice names (Daniel is the iOS en-GB male default)
+  if(/daniel|arthur|oliver|george|james|ryan|thomas|graham|jamie|male/.test(n)) s+=40;
+  // Downrank clearly-female voices so a male wins when both exist
+  if(/samantha|karen|moira|serena|kate|martha|fiona|tessa|zoe|allison|susan|nora|joana|catherine|sonia|libby|aria|jenny|kathy|female/.test(n)) s-=25;
+  if(/compact|eloquence/.test(n)) s-=15;
+  return s;
+}
+function loadVoices(){
+  if(!TTS)return;
+  try{
+    voices=speechSynthesis.getVoices()||[];
+    const sel=$('voiceSel'); if(!sel)return; sel.innerHTML='';
+    const sorted=[...voices].map((v,idx)=>({v,idx})).sort((a,b)=>rankVoice(b.v)-rankVoice(a.v));
+    sorted.forEach(({v,idx})=>{const o=document.createElement('option');o.value=idx;o.textContent=`${v.name} (${v.lang})`;sel.appendChild(o);});
+    if(sorted.length&&sel.selectedIndex<0) sel.value=sorted[0].idx;
+  }catch(e){}
+}
+function currentVoice(){
+  const sel=$('voiceSel');
+  if(sel&&sel.value!==''&&voices[sel.value]) return voices[sel.value];
+  let best=null,bs=-1e9; voices.forEach(v=>{const s=rankVoice(v);if(s>bs){bs=s;best=v;}}); return best;
+}
+if(TTS){ loadVoices(); try{speechSynthesis.onvoiceschanged=loadVoices;}catch(e){} }
+function setPlayUI(on){const b=$('playBtn');if(!b)return;b.classList.toggle('playing',on);b.innerHTML=on?'■ Stop':'▶︎ Play narration';}
+function stopAudio(){speaking=false;chunks=[];ci=0;try{if(TTS)speechSynthesis.cancel();}catch(e){}setPlayUI(false);}
+function speakNext(){
+  if(!speaking||ci>=chunks.length){stopAudio();return;}
+  try{
+    const u=new SpeechSynthesisUtterance(chunks[ci]);
+    const v=currentVoice(); if(v){u.voice=v;u.lang=v.lang;} else u.lang='en-GB';
+    u.rate=0.95; u.pitch=1.03;
+    u.onend=()=>{ci++;speakNext();}; u.onerror=()=>{ci++;speakNext();};
+    speechSynthesis.speak(u);
+  }catch(e){stopAudio();toast('Audio unavailable in this browser');}
+}
+// Fix how the TTS engine reads abbreviations and German names.
+// Only affects spoken audio — the on-screen text stays correctly written.
+function speechNormalize(t){
+  let s=' '+t+' ';
+  // "St." -> "Saint" (it wrongly expands to "Street"). Handles "Alt-St."
+  s=s.replace(/\bAlt-St\.\s*/g,'Alt Saint ');
+  s=s.replace(/\bSt\.\s*/g,'Saint ');
+  s=s.replace(/\bSt-/g,'Saint ');
+  // German place-name pronunciation hints (spelled for an English voice)
+  const say={
+    'Marko-Feingold-Steg':'Marko Fine-gold Shteg',
+    'Petersfriedhof':'Peters-freed-hof',
+    'Universitätsplatz':'Oo-nee-vair-zi-tates-plats',
+    'Kollegienkirche':'Ko-lay-gee-en-keerkh-a',
+    'Fischer von Erlach':'Fisher fon Air-lakh',
+    'Pferdeschwemme':'Pfair-da-shvemma',
+    'Kapitelschwemme':'Ka-pee-tel-shvemma',
+    'Hohensalzburg':'Ho-en-zalts-boorg',
+    'Festung Hohensalzburg':'Festoong Ho-en-zalts-boorg',
+    'Residenzbrunnen':'Rezi-dents-broonen',
+    'Residenzplatz':'Rezi-dents-plats',
+    'Mozartplatz':'Mote-sart-plats',
+    'Mozarts Geburtshaus':'Mote-sarts Ge-boorts-house',
+    'Getreidegasse':'Ge-try-da-gassa',
+    'Kapitelplatz':'Ka-pee-tel-plats',
+    'Salzburger Nockerl':'Zalts-boorger Nock-erl',
+    'Salzburger Festspiele':'Zalts-boorger Fest-shpeela',
+    'Salzburger Dom':'Zalts-boorger Dohm',
+    'Salzburg':'Zalts-boorg',
+    'Salzach':'Zalts-akh',
+    'Nonnberg':'Non-bairg',
+    'Mönchsberg':'Mernkhs-bairg',
+    'Stift St. Peter':'Shtift Saint Peter',
+    'Stiftskulinarium':'Shtifts-koo-li-nar-ee-um',
+    'Stiegl-Keller':'Shteegl Keller',
+    'Stierwäscher':'Shteer-vesher',
+    'Schloss Mirabell':'Shloss Meera-bell',
+    'Mirabell':'Meera-bell',
+    'Wolf Dietrich von Raitenau':'Volf Deet-rikh fon Rye-ten-ow',
+    'Paris Lodron':'Paris Lo-drone',
+    'Gebhard von Helfenstein':'Geb-hard fon Helfen-shtine',
+    'Leonhard von Keutschach':'Lay-on-hard fon Koyt-shakh',
+    'Herbert von Karajan':'Herbert fon Kara-yan',
+    'Santino Solari':'San-tee-no So-lah-ree',
+    'Tommaso di Garona':'Tom-mah-zo dee Ga-roh-na',
+    'Stephan Balkenhol':'Shteffan Balken-hole',
+    'Georg von Trapp':'Gay-org fon Trapp',
+    'Maria Kutschera':'Maria Koo-chair-a',
+    'Colloredo':'Col-lo-ray-do',
+    'Nannerl':'Nah-nerl',
+    'Michael Haydn':'Michael High-den',
+    'Anschluss':'Ahn-shloos',
+    'Grüß Gott':'Grooss Got',
+    'Untersberg':'Oonters-bairg',
+    'Alter Markt':'Alter Markt',
+    'Tomaselli':'Toma-zelli',
+    'Servus':'Sair-voos'
+  };
+  // longer keys first so multi-word names win over single words
+  Object.keys(say).sort((a,b)=>b.length-a.length).forEach(k=>{
+    s=s.replace(new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'), say[k]);
+  });
+  // strip the umlaut/accent marks that survive, so the engine doesn't choke
+  s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  return s.replace(/\s+/g,' ').trim();
+}
+
+function speakText(text){
+  if(!TTS){toast('This browser has no speech support');return;}
+  try{speechSynthesis.cancel();}catch(e){}
+  if(!voices.length)loadVoices();
+  const full=speechNormalize(text).replace(/\s*\n+\s*/g,' ').replace(/\s+/g,' ').trim();
+  chunks=full.match(/[^.!?]+[.!?]+|\S+$/g)||[full];
+  ci=0; speaking=true; setPlayUI(true); speakNext();
+}
+function playAudio(){ if(speaking){stopAudio();return;} speakText(STOPS[cur].n+'. '+STOPS[cur].text); }
+$('playBtn').onclick=playAudio;
+$('voiceTest').onclick=()=>{stopAudio();speaking=true;chunks=["This is how your Salzburg guide will sound. Shall we begin?"];ci=0;setPlayUI(true);speakNext();};
+
+/* ================= OVERLAYS ================= */
+const ovList=$('ovList');
+STOPS.forEach((s,i)=>{
+  const d=document.createElement('div');d.className='ovitem';
+  d.innerHTML=`<div class="ovnum">${i+1}</div><div><div class="nm">${s.n}</div><div class="de">${s.de} · ${s.cat}</div></div>`;
+  d.onclick=()=>{goTo(i);$('listOv').classList.remove('open');};
+  ovList.appendChild(d);
+});
+$('listBtn').onclick=()=>$('listOv').classList.add('open');
+$('setBtn').onclick=()=>{loadVoices();$('setOv').classList.add('open');};
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).classList.remove('open'));
+
+/* ================= GEOLOCATION ================= */
+$('locBtn').onclick=()=>{
+  if(!navigator.geolocation){toast('Location not available');return;}
+  if(!mapOK||!map){toast('Map offline right now');return;}
+  toast('Finding you…');
+  navigator.geolocation.getCurrentPosition(p=>{
+    const {latitude:la,longitude:lo}=p.coords;
+    try{
+      if(meMarker)meMarker.setMap(null);
+      meMarker=new google.maps.Marker({
+        map, position:{lat:la,lng:lo},
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:7,fillColor:'#2a7ae2',fillOpacity:1,strokeColor:'#fff',strokeWeight:3}
+      });
+      map.panTo({lat:la,lng:lo}); map.setZoom(15); toast('You are here 📍');
+    }catch(e){toast('Could not place you');}
+  },()=>toast('Allow location access to use this'),{enableHighAccuracy:true,timeout:9000});
+};
+
+render(0);
+</script>
+
+<!-- ============================================================= -->
+<!--  GOOGLE MAPS LOADER                                           -->
+<!--  Replace YOUR_API_KEY_HERE below with your own key.           -->
+<!--  Keep the rest of the line exactly as-is.                     -->
+<!-- ============================================================= -->
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&callback=initMap&loading=async">
+</script>
+</body>
+</html>
